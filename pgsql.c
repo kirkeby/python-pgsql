@@ -992,7 +992,18 @@ _pg_fetch_cell(PGresult *result, int row, int col)
 		free(cashbuf);
 	    }
 	    break;
-	case BPCHAROID: /* these are all the string types we usually care about */
+        /* Decoding these is handled by the Python code */
+	case DATEOID:
+	case ABSTIMEOID:
+	case RELTIMEOID:
+        case TIMESTAMPOID:
+	case TIMESTAMPTZOID:
+	case TINTERVALOID:
+	case INTERVALOID:
+	case TIMEOID:
+	case TIMETZOID:
+        /* .. and these are actual character string types */
+	case BPCHAROID:
 	case VARCHAROID:
 	case NAMEOID:
 	case CHAROID:
@@ -1275,18 +1286,21 @@ static PyObject *_pgsource_typecode(int typecode)
 	case CASHOID:
 	    tc = PyString_FromString("money");
 	    break;
+	case DATEOID:
+	    tc = PyString_FromString("date");
+	    break;
 	case ABSTIMEOID:
 	case RELTIMEOID:
-	case TINTERVALOID:
-	case DATEOID:
-	case TIMEOID:
-	case TIMETZOID:
 	case TIMESTAMPOID:
 	case TIMESTAMPTZOID:
-	case INTERVALOID:
-	    /* FIXME: we might need to break those down in more detail */
 	    tc = PyString_FromString("datetime");
 	    break;
+        /*
+	case TINTERVALOID:
+	case INTERVALOID:
+	case TIMEOID:
+	case TIMETZOID:
+        */
 	case BOOLOID:
 	    tc = PyString_FromString("bool");
 	    break;

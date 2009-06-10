@@ -25,7 +25,7 @@ See the README file for an overview of this module's contents.
 
 import os
 import types
-import time
+from time import localtime, strptime
 
 import _pgsql
 
@@ -38,12 +38,8 @@ from _pgsql import INV_READ, INV_WRITE, SEEK_CUR, SEEK_END, SEEK_SET, \
      RESULT_DDL, RESULT_DML, RESULT_DQL, RESULT_EMPTY, \
      TRANS_ACTIVE, TRANS_IDLE, TRANS_INERROR, TRANS_INTRANS, TRANS_UNKNOWN
 
-try: # use mx.DateTime module if available
-    from mx.DateTime import DateTime, \
-         TimeDelta, DateTimeType
-except ImportError: # otherwise use standard datetime module
-    from datetime import datetime as DateTime, \
-         timedelta as TimeDelta, datetime as DateTimeType
+from datetime import datetime as DateTime, \
+     timedelta as TimeDelta, datetime as DateTimeType
 
 try: # Python-2.3 doesn't have sets in global namespace
     set = set
@@ -74,14 +70,24 @@ def_port   = -1   #default connection port
 def_user   = None #default username
 def_passwd = None #default password
 
-
 # convert to Python types the values that were not automatically
 # converted by pgsql.c
 def typecast(typ, value):
+    if value is None:
+        return value
     if typ == DATETIME:
-        # FIXME... we should prolly do something here to transalate
-        # datetime strings, when we need it
-        pass
+        if '.' in value:
+            value, micros = value.split('.')
+            micros = int(micros)
+        else:
+            micros = 0
+        t = strptime(value, '%Y-%m-%d %H:%M:%S')
+        t = Timestamp(*t[:6])
+        t.replace(microsecond=micros)
+        return t
+    elif typ == DATE:
+        t = strptime(value, '%Y-%m-%d')
+        return Date(*t[:3])
     return value
 
 ### cursor object
@@ -127,23 +133,28 @@ class Cursor(object):
         return self
 
     def fetchone(self):
-        return self._source.fetchone()
+        return self._typecast(self._source.fetchone())
 
     def fetchall(self):
-        return self._source.fetchall()
+        return map(self._typecast, self._source.fetchall())
 
     def __manyiter(self, size, fetchone):
         for x in xrange(size):
             val = fetchone()
             if val is None:
                 raise StopIteration
-            yield val
+            yield self._typecast(val)
     def fetchmany(self, size = None):
         if size is None:
             size = self.arraysize
         return list(self.__manyiter(size, self._source.fetchone))
 
+    def _typecast(self, row):
+        types = zip(*self.description)[1]
+        return tuple(typecast(t, v) for t, v in zip(types, row))
+
     # extensions
+    # FIXME - remove these.
     def fetchone_dict(self):
         return self._source.fetchonedict()
     def fetchall_dict(self):
@@ -421,7 +432,8 @@ BOOL = pgType("bool")
 MONEY = pgType('money')
 
 # this may be problematic as type are quite different ... I hope it won't hurt
-DATETIME = pgType("datetime")
+DATE = pgType("date")
+DATETIME = pgType("datetime", 'timestamp')
 
 # OIDs are used for everything (types, tables, BLOBs, rows, ...). This may cause
 # confusion, but we are unable to find out what exactly is behind the OID (at
@@ -439,13 +451,13 @@ def Timestamp(year, month, day, hour, minute, second):
     return DateTime(year, month, day, hour, minute, second)
 
 def DateFromTicks(ticks):
-    return apply(Date, time.localtime(ticks)[:3])
+    return apply(Date, localtime(ticks)[:3])
 
 def TimeFromTicks(ticks):
-    return apply(Time, time.localtime(ticks)[3:6])
+    return apply(Time, localtime(ticks)[3:6])
 
 def TimestampFromTicks(ticks):
-    return apply(Timestamp, time.localtime(ticks)[:6])
+    return apply(Timestamp, localtime(ticks)[:6])
 
 def Binary(str):
     return str
