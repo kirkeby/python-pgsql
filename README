@@ -19,6 +19,9 @@ PyGreSQL module are:
 0. COPYRIGHT NOTICES
 =====================
 
+Reworked to support data-type conversions more sanely by Sune Kirkeby
+<ski@csis.dk>, Copyright (c) 2009 CSIS A/S.
+
 Reworked from PyGreSQL by Cristian Gafton <gafton@rpath.com>, (c) 2006
 Copyright (c) 2006 rPath, Inc.
 

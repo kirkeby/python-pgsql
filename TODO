@@ -1,5 +1,20 @@
+* Remove the dict extensions methods, and other spurious extensions to the
+  DB API; methods like this should instead go in an external DB-API compatible
+  helper library (which could also translate between the different bind
+  parameter styles.)
+
 * Fix broken bind-parameter supprt, by translating '... %s .. %s' into
   '... $1 .. $2' behind the scenes.
+
+* Work through the reqirements in tests/README:
+   - all integral number-types must be returned as long.
+   - non-lossy decimal types must be returned as decimal.
+   - lossy decimal types must be returned as float.
+
+* The datetime-handling of microseconds causes
+    DeprecationWarning: integer argument expected, got float
+  from the datetime classes; floating-point seconds should be recast
+  as seconds and microseconds arguments to the datetime constructors.
 
 * The large objects interface needs some attention as well (note: this is
   not the same as using BYTEA fields in a table. Large objects are a

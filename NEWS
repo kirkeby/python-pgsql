@@ -1,3 +1,12 @@
+Changed since 0.9.7:
+ o Add tests.
+ o Update handling of binary vs text strings; str is always sent as
+   type BYTEA and unicode as type TEXT, and BYTEA strings are returned as
+   str-instances, while all the character string types are returned as
+   unicode-instances.
+ o Implement handling of date and time types.
+ o Fix cursor.rowcount attribute for non-DQL statements.
+
 Changed in 0.9.7:
  o updated inserttable (aka copy from stdin) support to correctly
    detect and report more error conditions that can happen during the
