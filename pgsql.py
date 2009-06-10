@@ -23,31 +23,21 @@ http://www.python.org/peps/pep-0249.html
 See the README file for an overview of this module's contents.
 """
 
-import os
-import types
 from time import localtime, strptime
 
 import _pgsql
-
-# exceptions
+from _pgsql import TRANS_ACTIVE, TRANS_IDLE, \
+                   TRANS_INERROR, TRANS_INTRANS, TRANS_UNKNOWN
 from _pgsql import InterfaceError, DatabaseError, InternalError, \
      OperationalError, ProgrammingError, IntegrityError, DataError, \
      NotSupportedError
-# constants we might use
-from _pgsql import INV_READ, INV_WRITE, SEEK_CUR, SEEK_END, SEEK_SET, \
-     RESULT_DDL, RESULT_DML, RESULT_DQL, RESULT_EMPTY, \
-     TRANS_ACTIVE, TRANS_IDLE, TRANS_INERROR, TRANS_INTRANS, TRANS_UNKNOWN
 
-from datetime import datetime as DateTime, \
-     timedelta as TimeDelta, datetime as DateTimeType
+from datetime import datetime, date, time, timedelta
 
 try: # Python-2.3 doesn't have sets in global namespace
     set = set
 except NameError:
     from sets import Set as set
-
-import weakref
-__CONNLIST = []
 
 ### module constants
 version = "0.9.7"
@@ -59,35 +49,36 @@ apilevel = '2.0'
 threadsafety = 1
 
 # this module use extended python format codes
+# FIXME - This is a big fat lie. We support $1 not :1-style parameters.
 paramstyle = 'numeric'
-
-# default values for connection parameters
-def_host   = None #default database host
-def_base   = None #default database name
-def_opt    = None #default connection options
-def_tty    = None #default debug tty
-def_port   = -1   #default connection port
-def_user   = None #default username
-def_passwd = None #default password
 
 # convert to Python types the values that were not automatically
 # converted by pgsql.c
+def typecast_date(value):
+    t = strptime(value, '%Y-%m-%d')
+    return Date(*t[:3])
+
+def typecast_datetime(value):
+    if '.' in value:
+        value, micros = value.split('.')
+        micros = int(micros)
+    else:
+        micros = 0
+
+    t = strptime(value, '%Y-%m-%d %H:%M:%S')
+    t = Timestamp(*t[:6])
+    t.replace(microsecond=micros)
+    return t
+
+typecasts = {
+    'date': typecast_date,
+    'datetime': typecast_datetime,
+}
 def typecast(typ, value):
     if value is None:
         return value
-    if typ == DATETIME:
-        if '.' in value:
-            value, micros = value.split('.')
-            micros = int(micros)
-        else:
-            micros = 0
-        t = strptime(value, '%Y-%m-%d %H:%M:%S')
-        t = Timestamp(*t[:6])
-        t.replace(microsecond=micros)
-        return t
-    elif typ == DATE:
-        t = strptime(value, '%Y-%m-%d')
-        return Date(*t[:3])
+    if typ in typecasts:
+        return typecasts[typ](value)
     return value
 
 ### cursor object
@@ -387,30 +378,16 @@ class Database(object):
         raise AttributeError, name
 
 ### module interface
-
-# connects to a database
-def connect(database = def_base, user = def_user, password = def_passwd,
-            host = def_host, port = def_port, opt = def_opt, tty = def_tty):
-    global __CONNLIST
-    # open the connection
+def connect(database=None, user=None, password=None,
+            host=None, port=-1, opt=None, tty=None):
+    '''Connect to a PostgreSQL database.'''
     cnx = _pgsql.connect(database, user, password, host, port, opt, tty)
-    db = Database(cnx)
-    __CONNLIST.append(weakref.ref(db))
-    return db
+    return Database(cnx)
 
-def closeall():
-    global __CONNLIST
-    for ref in __CONNLIST:
-        db = ref()
-        if db is not None:
-            db.close()
-    __CONNLIST = []
-
-### types handling
-
-# PostgreSQL is object-oriented: types are dynamic.
-# We must thus use type names as internal type codes.
-class pgType:
+### Type-code comparators
+class TypeCode:
+    '''My job is to compare equal to those type-codes (from
+    cursor.description) which I represent.'''
     def __init__(self, *values):
         self.values = values
 
@@ -422,45 +399,30 @@ class pgType:
         else:
             return -1
 
-STRING = pgType("string")
-BINARY = pgType("binary")
-INTEGER = pgType("integer")
-LONG = pgType("long")
-FLOAT = pgType("double")
-NUMBER = pgType("integer", "long", "double", "oid")
-BOOL = pgType("bool")
-MONEY = pgType('money')
+STRING = TypeCode('string')
+BINARY = TypeCode('binary')
+NUMBER = TypeCode('integer', 'long', 'double', 'money', 'bool')
+DATETIME = TypeCode('date', 'datetime', 'timestamp', 'interval')
+ROWID = TypeCode('oid')
 
-# this may be problematic as type are quite different ... I hope it won't hurt
-DATE = pgType("date")
-DATETIME = pgType("datetime", 'timestamp')
+del TypeCode
 
-# OIDs are used for everything (types, tables, BLOBs, rows, ...). This may cause
-# confusion, but we are unable to find out what exactly is behind the OID (at
-# least not easily enough). Should this be undefined as BLOBs ?
-ROWID = pgType("oid")
-
-# mandatory type helpers
+# Type-constructors
 def Date(year, month, day):
-    return DateTime(year, month, day)
-
+    return date(year, month, day)
 def Time(hour, minute, second):
-    return TimeDelta(hour, minute, second)
-
+    return time(hour, minute, second)
 def Timestamp(year, month, day, hour, minute, second):
-    return DateTime(year, month, day, hour, minute, second)
+    return datetime(year, month, day, hour, minute, second)
+def Binary(s):
+    return str(s)
 
 def DateFromTicks(ticks):
     return apply(Date, localtime(ticks)[:3])
-
 def TimeFromTicks(ticks):
     return apply(Time, localtime(ticks)[3:6])
-
 def TimestampFromTicks(ticks):
     return apply(Timestamp, localtime(ticks)[:6])
-
-def Binary(str):
-    return str
 
 # if run as script, print some information
 if __name__ == '__main__':

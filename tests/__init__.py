@@ -1,4 +1,4 @@
-__all__ = ['test_timestamp', 'test_unicode', 'test_bytea']
+__all__ = ['test_timestamp', 'test_unicode', 'test_bytea', 'test_types']
 
 import pgsql
 
