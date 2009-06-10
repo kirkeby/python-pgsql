@@ -1,0 +1,16 @@
+Python postgresql client-library requirements
+=============================================
+
+*Must* handle unicode-strings, byte-strings and character-encodings correctly.
+ - (byte)str should be passed unchanged through to the database.
+ - unicode should be encoded in client_encoding.
+ - bytea results must be returned as (byte)str.
+ - all text types must be returned as unicode.
+ - all integral number-types must be returned as long.
+ - non-lossy decimal types must be returned as decimal.
+ - lossy decimal types must be returned as float.
+ - all other types must have user-definable en/decodings.
+
+*Must* suppport server-side cursors.
+
+*Must* support .rowcount, .lastrowid, etc.

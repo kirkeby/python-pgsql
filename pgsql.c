@@ -545,17 +545,28 @@ static pgparams *_pgsource_getparams(PyObject *params)
 	} else if (PyString_Check(param)) {
 	    Py_ssize_t len;
 	    PyString_AsStringAndSize(param, &(ret->paramValues[i]), &len);
-	    if (memchr(ret->paramValues[i], '\0', len)) {
-		ret->paramTypes[i] = BYTEAOID;
-		ret->paramFormats[i] = 1;
-	    } else {
-		/* regular strings are handled fine */
-	    }
+            ret->paramTypes[i] = BYTEAOID;
+            ret->paramFormats[i] = 1;
 	    ret->paramLengths[i] = len;
 	} else if (PyUnicode_Check(param)) {
+            /* Encode as UTF-8 */
+            PyObject *str;
 	    Py_ssize_t len;
-	    len = PyUnicode_GET_DATA_SIZE(param);
-	    ret->paramValues[i] = (char *) PyUnicode_AS_DATA(param);
+            char *c;
+            str = PyUnicode_AsUTF8String(param);
+            PyString_AsStringAndSize(str, &c, &len);
+            /* Clone UTF-8 string into buffer for libpq */
+	    ret->paramValues[i] = (char *) malloc(len);
+            if(ret->paramValues[i] == NULL) {
+                Py_DECREF(str);
+		_pgsource_freeparams(ret);
+		PyErr_SetString(ProgrammingError, "out of memory binding paramaters");
+		return NULL;
+            }
+            memcpy(ret->paramValues[i], c, len);
+            /* Free temporary data and hand clone over to libpq */
+            Py_DECREF(str);
+            ret->mustFree[i] = 1;
 	    ret->paramTypes[i] = VARCHAROID;
 	    ret->paramFormats[i] = 1;
 	    ret->paramLengths[i] = len;
@@ -987,7 +998,7 @@ _pg_fetch_cell(PGresult *result, int row, int col)
 	case CHAROID:
 	case TEXTOID:
 	    /* It is assumed that null character terminates these strings */
-	    ret = PyString_FromStringAndSize(cell, cellsize);
+	    ret = PyUnicode_DecodeUTF8(cell, cellsize, "strict");
 	    break;
 	case BYTEAOID:
 	    if (PQfformat(result, col) == 0) {
