@@ -1,0 +1,5 @@
+#!/bin/sh
+cd `dirname $0`
+./setup.py build
+export PYTHONPATH=`echo $PWD/build/lib.*`
+nosetests tests "$@"
