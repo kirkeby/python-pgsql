@@ -6,6 +6,15 @@
 * Fix broken bind-parameter supprt, by translating '... %s .. %s' into
   '... $1 .. $2' behind the scenes.
 
+* Clean up setup.py (*shudder*).
+
+* Update documentation:
+  - Fix description of bind-parameters.
+  - Describe str/unicode handling.
+  - Remove refernces to dead extensions methods.
+  - Reference:
+    http://archives.postgresql.org/pgsql-announce/2006-09/msg00002.php
+
 * Work through the reqirements in tests/README:
    - all integral number-types must be returned as long.
    - non-lossy decimal types must be returned as decimal.
@@ -15,6 +24,8 @@
     DeprecationWarning: integer argument expected, got float
   from the datetime classes; floating-point seconds should be recast
   as seconds and microseconds arguments to the datetime constructors.
+
+* Release new version (new name?).
 
 * The large objects interface needs some attention as well (note: this is
   not the same as using BYTEA fields in a table. Large objects are a
