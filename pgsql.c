@@ -428,6 +428,7 @@ static PyObject *_pgsource_postexec(pgsourceobject * self)
 		self->result_type = RESULT_DML;
 		num_rows = atol(temp);
 	    }
+	    self->max_row = num_rows;
 	    return PyInt_FromLong(num_rows);
 
 	    /* query failed */
@@ -1450,10 +1451,7 @@ pgsource_getattr(pgsourceobject * self, char *name)
 	return PyInt_FromLong(self->result_type);
     /* ntuples */
     if (!strcmp(name, "rowcount")) {
-	if (self->result_type != RESULT_DQL)
-	    return PyInt_FromLong(-1);
-	else
-	    return PyInt_FromLong(self->max_row);
+        return PyInt_FromLong(self->max_row);
     }
     /* nfields */
     if (!strcmp(name, "nfields")) {
