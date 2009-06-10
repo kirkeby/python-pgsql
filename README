@@ -1,0 +1,235 @@
+pgsql Python 2.3+ interface for PostgreSQL 8.0+
+===============================================
+
+This is a simple PostgreSQL interface for Python which is derived
+from the PyGreSQL 3.8.1 sources module. The main changes from the
+PyGreSQL module are:
+
+- support for bind parameters, alleviating the need for
+  extensive, expensive and vulnerable quoting of user-supplied
+  data
+- support for server side cursors for looping through large query
+  results without loading up the entire result set in the client's
+  memory
+- returned values are translated to Python objects in the C layer,
+  resulting in some speed improvement
+- better DB API 2.0 compliance
+
+
+0. COPYRIGHT NOTICES
+=====================
+
+Reworked from PyGreSQL by Cristian Gafton <gafton@rpath.com>, (c) 2006
+Copyright (c) 2006 rPath, Inc.
+
+PyGreSQL, version 3.8
+Written by D'Arcy J.M. Cain, darcy@druid.net
+Based heavily on code written by Pascal Andre, andre@chimay.via.ecp.fr.
+Copyright (c) 1995, Pascal ANDRE (andre@via.ecp.fr)
+
+Further modifications copyright 1997 - 2000 by D'Arcy J.M. Cain
+(darcy@druid.net).
+
+Permission to use, copy, modify, and distribute this software and
+its documentation for any purpose, without fee, and without a written
+agreement is hereby granted, provided that the above copyright notices
+and this paragraph and the following two paragraphs appear in all
+copies or in any new file that contains a substantial portion of this
+file.
+
+IN NO EVENT SHALL THE AUTHOR BE LIABLE TO ANY PARTY FOR DIRECT,
+INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING
+LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS
+DOCUMENTATION, EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+
+THE AUTHOR SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS
+IS" BASIS, AND THE AUTHOR HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE,
+SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+
+
+1. Installing
+=============
+
+This is a standard Python distutils module, so the basic steps for
+building it are (on most modern systems, that implies Python 2.1 or
+later and PostgreSQL 8,0 or later):
+
+    python setup.py build
+    python setup.py install
+
+The Python and PostgreSQL devel headers and libraries have to be
+installed on your system when building.  The usual distutils options
+apply and you can use for reference:
+
+    python setup.py --help
+
+
+2. Using pgsql
+==============
+
+For those in a hurry, check out demo.py for a "show me the code"
+tutorial.
+
+#!/usr/bin/python
+import pgsql
+
+db = pgsql.connect(database, user, password, host, port, opt, tty)
+
+Concepts:
+--------
+
+QUERIES AND PARAMETERS: PostgreSQL allows for numeric parameters to be
+passed in a query (bind parameters). If parameters are used, they are
+referred to in the query string as $1, $2, etc. Bind parameters are
+passed in as a tuple that holds the values bound in the query. The
+primary advantage of using bind parameters is that parameter values
+may be separated from the command string, thus avoiding the need for
+tedious and error-prone quoting and escaping. For example:
+    cu.execute("insert into foo(v1,s,v2) values ($1,$2,$1)", (x,y))
+
+STORAGE CURSORS: The default db.cursor() method returns a 'storage'
+cursor. That means that the result of every execute() is automatically
+retrieved in the client memory and then it is scanned over using
+methods like fetchone() and fetchall(). These cursors are fast and
+free up the server's resources as soon as possible, but are unsuitable
+for queries that return large datasets.
+
+ITERATOR CURSORS: These cursors are an interface to the server-based
+cursors (DECLARE CURSOR... / FETCH FROM... / CLOSE) and are suitable
+for looping over large datasets, presumably using fetchone() or
+fetchmany(n). using fetchall() on a iterator cursor would make little
+sense, since that would request the entire result set to be downloaded
+in the client memory, which would defeat the purpose of the
+iterator. This cursors are created by calling the itercursor() method
+of a database instance (this is an extention not covered by the DB API
+2.0. If you find that you like the iterator cursors more than the
+storage kind, you can derive your own Database class and assign
+cursor() to instantiate a iterator cursor as you see fit). The big
+disadvantage of the iterator cursors is that they require the server
+to be pinged every time you need to retrieve a new row (or set of
+rows) - thus some increased latency that don't make them suitable for
+everyday use.
+
+
+DATABASE HANDLE:
+---------------
+db = pgsql.connect(host="localhost", database="mydb",
+                   user="luser", password="lemmein")
+db.commit()
+db.rollback()
+db.close()
+	pretty much self explanatory methods
+db.cursor()
+	returns a storage cursor
+db.itercursor()
+	returns an iterator cursor
+db.prepare(query)
+	sends the query to the server and prepares it for execution.
+	returns a storage cursor that can be used for
+	checking/fetching the resuklts of the query. Bind parameters
+	are allowed in the query, to be supplied later as a lone tuple
+	in the execute() method of the returned cursor.
+db.execute(query [, params])
+	executes a query, returns a storage cursor that can be used to
+	fetch results. This is a shorthand for:
+	    cu = db.cursor()
+	    cu.execute(query [, params])
+	    return cu
+db.bulkload(tablename, rows, fieldnames)
+        inserts into the named table the list of rows. Each row in the
+	rows list is a tuple containg values for each column in the
+	fieldnames tuple. rows can be a tuple, list or iterator. Example:
+	db.bulkload("customers", [("john", "smith")], ("first", "last"))
+db.escape_string(s)  [extension]
+db.escape_bytea(s)   [extension]
+	For those cases when one must absolutely inject user-supplied
+	data in a query string, these functions can be used to escape
+	a string, or a binary string respectively. These are supposed
+	to offer protection against SQL injection attacks - although
+	using bind paramaters is still the safest way to go about
+	sending and retrieving user-supplied data to and from the
+	server.
+db.unescape_bytea(s) [extension]
+	BYTEA type columns are automatically unescaped by the C layer
+	when results are retrieved from the server side. Usually there
+	is no need to use this when working with BYTEA columns;
+	however, if you use the encode_bytea to insert binary strings
+	into regular CHAR/VARCHAR columns, you will need to use
+	unescape_bytea on the retrieved results.
+db.notices          [extension]
+db.setnotices(bool) [extension]
+	db.notices is list of preformatted server notice strings. You
+	can enable the capture of server notices by calling
+	db.setnotices(True|False). By default, notices are not collected
+	by the database object. Every call to setnotices() will reset the
+	notices list, regardless of the enable flag (therefore you
+	should save notices beforehand, if you need them)
+
+
+CURSORS:
+-------
+cu.execute(query [, params])
+	executes the query (with optional bind parameters). If bind
+	parameters are used (denoted by $1, $2, etc. in the query
+	string) then params must be a sequence (tuple, list) and its
+	length must match the number of bind parameters in the query.
+
+	Note: For prepared cursors, the execute methdo becomes
+	cu.execute(params). If there are no bind parameters in the
+	prepared query, then params must be passed as None.
+
+cu.executemany(query, param_list)
+	param_list must be a list of tuples; conceptually similar to:
+		cu = db.prepare(query)
+		for param in param_list:
+		    cu.execute(param)
+cu.fetchone()
+cu.fetchmany(n)
+cu.fetchall()
+	standard result retrieval methods for getting one, a number n
+	or all of the rows from a previous execute.
+
+cu.description
+cu.rowcount
+	standard DB API 2.0 attributes containing the information
+	about the properties of each column in the result set and the
+	number of rows returned by the last select query, respectively
+
+cu.fields
+	[extension] - returns a tuple with the column names from the
+	last select, in select order
+cu.nfields
+	[extension] - same as len(cu,fields)
+cu.rownumber
+	[extension] - for storage cursors, the current row number when
+	processing with fetchone()/fetchmany(n)
+cu.fetchonedict()
+	[extension] - like fetchone() but returns a dictionary instead
+	of a tuple for the current row. Similar to:
+	    dict( zip( cu.fields, cu,fetchone() ) )
+cu.fetchalldict()
+	[extension] - ditto
+cu.escape_string(s)  [extension]
+cu.escape_bytea(s)   [extension]
+	For those cases when one must absolutely inject user-supplied
+	data in a query string, these functions can be used to escape
+	a string, or a binary string respectively. These are supposed
+	to offer protection against SQL injection attacks - although
+	using bind paramaters is still the safest way to go about
+	sending and retrieving user-supplied data to and from the
+	server.
+cu.unescape_bytea(s) [extension]
+	BYTEA type columns are automatically unescaped by the C layer
+	when results are retrieved from the server side. Usually there
+	is no need to use this when working with BYTEA columns;
+	however, if you use the encode_bytea to insert binary strings
+	into regular CHAR/VARCHAR columns, you will need to use
+	unescape_bytea on the retrieved results.
+
+NOTE: items marked with [extension] are extensions to the DB API 2.0
+api provided solely by this module and SHOULD NOT BE RELIED ON FOR
+WRITING PORTABLE CODE.

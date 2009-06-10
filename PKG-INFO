@@ -1,0 +1,22 @@
+Metadata-Version: 1.0
+Name: python-pgsql
+Version: 0.9.7
+Summary: PostgreSQL bindings for Python w/ bind parameters support
+Home-page: http://people.rpath.com/~gafton
+Author: Cristian Gafton
+Author-email: gafton@rpath.com
+License: Python
+Description: 
+        This is a set of Python bindings for PostgreSQL derived from the PyGreSQL 3.8.1 sources. The main changes from the PyGreSQL module are:
+        
+        * support for bind parameters, alleviating the need for extensive, expensive and vulnerable quoting of user-supplied data
+        * support for server side cursors for looping through large query results without loading up the entire result set in the client's memory
+        * returned values are translated to Python objects in the C layer, resulting in some speed improvement
+        * DB API 2.0 compliance, with some extensions
+        
+        
+        PostgreSQL allows for numeric parameters to be passed in a query (bind parameters). If parameters are used, they are referred to in the query string as $1, $2, etc. Bind parameters are passed in as a tuple that holds the values bound in the query. The primary advantage of using bind parameters is that parameter values may be separated from the command string, thus avoiding the need for tedious and error-prone quoting and escaping.
+        
+        Because of the different query syntax between what PostgreSQL natively supports and what PyGreSQL used to implement (Python style substitutions like %s and %(name)s), these bindings will not grok SQL queries written for PyGreSQL - you might need to slightly rework some of your queries to take advantage of the bind parameter support.
+        
+Platform: UNKNOWN

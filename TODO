@@ -1,0 +1,27 @@
+TODO for pgsql rewrite:
+
+* Handle the DATETIME fields more gracefully. Currently they are
+returned as strings into the Python application layer, and from there
+they have to be manually converted to whatever structures one uses. I
+haven't used the myriad of PostgreSQL date/time types to go through
+this process yet.
+
+* large objects interface needs some attention as well (note: this is
+not the same as using BYTEA fields in a table. Large objects are a
+PostgreSQL specific thing. BYTEA columns work just fine)
+
+* More consistent return values for UPDATE vs INSERT INTO queries
+
+* Currently we send the bind parameters in text mode to the
+server. When we retrieve the results, the result sets are also
+retrieved in text mode and have to be converted from string
+representation to Python object types. PostgreSQL supports binary mode
+transfers both ways, but documentation on how various data types need
+to be encapsulated in binary mode is sorely lacking.
+
+* Data types which are specific to PostgreSQL are not handled
+correctly by these bindings:
+  - geometric types
+  - array types
+  - network address types
+  - bitstring type
