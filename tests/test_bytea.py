@@ -1,12 +1,7 @@
-import pgsql
-
+create_statements = [
+    'CREATE TEMPORARY TABLE bin(a bytea)',
+]
 def test_bytea():
-    cnx = pgsql.connect()
-    cu = cnx.cursor()
-
-    cnx.execute('CREATE TEMPORARY TABLE bin(a bytea)')
-
-    cnx.execute('INSERT INTO bin(a) VALUES($1)', [pgsql.Binary('\xf8')])
-    rows = cu.execute('SELECT * FROM bin').fetchall()
-    assert rows == [('\xf8',)], `rows`
-
+    cnx.execute('INSERT INTO bin(a) VALUES($1)', [dbapi.Binary('\xf8')])
+    value, = cu.execute('SELECT * FROM bin').fetchone()
+    assert value == '\xf8', `value`
