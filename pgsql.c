@@ -1295,12 +1295,14 @@ static PyObject *_pgsource_typecode(int typecode)
 	case TIMESTAMPTZOID:
 	    tc = PyString_FromString("datetime");
 	    break;
-        /*
-	case TINTERVALOID:
-	case INTERVALOID:
 	case TIMEOID:
 	case TIMETZOID:
-        */
+	    tc = PyString_FromString("time");
+	    break;
+	case TINTERVALOID:
+	case INTERVALOID:
+	    tc = PyString_FromString("interval");
+	    break;
 	case BOOLOID:
 	    tc = PyString_FromString("bool");
 	    break;

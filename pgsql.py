@@ -59,6 +59,12 @@ def typecast_date(value):
     return Date(*t[:3])
 
 def typecast_datetime(value):
+    if '+' in value:
+        if value.endswith('+00'):
+            value = value[:-3]
+        else:
+            raise NotImplementedError('Can not represent timezones in Python')
+
     if '.' in value:
         value, micros = value.split('.')
         micros = int(micros)
@@ -70,9 +76,42 @@ def typecast_datetime(value):
     t.replace(microsecond=micros)
     return t
 
+def typecast_time(value):
+    if '+' in value:
+        if value.endswith('+00'):
+            value = value[:-3]
+        else:
+            raise NotImplementedError('Can not represent timezones in Python')
+
+    if '.' in value:
+        value, micros = value.split('.')
+        micros = int(micros)
+    else:
+        micros = 0
+
+    t = strptime(value, '%H:%M:%S')
+    t = Time(*t[3:6])
+    t.replace(microsecond=micros)
+    return t
+
+def typecast_interval(value):
+    if ' days ' in value:
+        days, time = value.split(' days ')
+        days = int(days)
+    else:
+        days, time = 0, value
+    time = typecast_time(time)
+    return timedelta(days=days,
+                     seconds=time.hour * 60 * 60
+                             + time.minute * 60
+                             + time.second,
+                     microseconds=time.microsecond)
+
 typecasts = {
     'date': typecast_date,
     'datetime': typecast_datetime,
+    'time': typecast_time,
+    'interval': typecast_interval,
 }
 def typecast(typ, value):
     if value is None:
@@ -402,7 +441,7 @@ class TypeCode:
 STRING = TypeCode('string')
 BINARY = TypeCode('binary')
 NUMBER = TypeCode('integer', 'long', 'double', 'money', 'bool')
-DATETIME = TypeCode('date', 'datetime', 'timestamp', 'interval')
+DATETIME = TypeCode('date', 'datetime', 'time', 'interval')
 ROWID = TypeCode('oid')
 
 del TypeCode
