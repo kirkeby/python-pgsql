@@ -582,6 +582,7 @@ static pgparams *_pgsource_getparams(PyObject *params)
 	    }
 	    snprintf(dblstr, 128, "%f", PyFloat_AsDouble(param));
 	    ret->paramValues[i] = dblstr;
+            ret->paramTypes[i] = FLOAT8OID;
 	    ret->mustFree[i] = 1;
 	} else if (param == Py_None) {
 	    ret->paramTypes[i] = 0;

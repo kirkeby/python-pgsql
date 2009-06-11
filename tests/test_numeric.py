@@ -13,6 +13,9 @@ def test_integer():
     assert isinstance(roundtrip_value(cu, 'z', 42), int)
     assert isinstance(roundtrip_value(cu, 'z', 42L), int)
 
+def test_float_into_integer():
+    assert isinstance(roundtrip_value(cu, 'z', 42.0), int)
+
 def test_bigint():
     assert isinstance(roundtrip_value(cu, 'w', 42), long)
     assert isinstance(roundtrip_value(cu, 'w', 42L), long)
