@@ -4,23 +4,20 @@ create_statements = [
     'CREATE TEMPORARY TABLE z(a interval)',
 ]
 
-def roundtrip_stamp(table, stamp):
-    cnx.execute('INSERT INTO %s(a) VALUES($1)' % table, [stamp])
-    value, = cu.execute('SELECT * FROM %s' % table).fetchone()
-    assert value == stamp, `value`
+from prelude import roundtrip_value
 
 def test_null():
-    roundtrip_stamp('x', None)
-    roundtrip_stamp('y', None)
+    roundtrip_value(cu, 'x', None)
+    roundtrip_value(cu, 'y', None)
 
 def test_Timestamp():
-    roundtrip_stamp('x', dbapi.Timestamp(1979, 7, 7, 22, 00, 00))
+    roundtrip_value(cu, 'x', dbapi.Timestamp(1979, 7, 7, 22, 00, 00))
 
 def test_precise_Timestamp():
-    roundtrip_stamp('x', dbapi.Timestamp(1979, 7, 7, 22, 00, 12.34))
+    roundtrip_value(cu, 'x', dbapi.Timestamp(1979, 7, 7, 22, 00, 12.34))
 
 def test_Date():
-    roundtrip_stamp('y', dbapi.Date(1979, 7, 7))
+    roundtrip_value(cu, 'y', dbapi.Date(1979, 7, 7))
 
 def test_time():
     value, = cu.execute('SELECT now()::time without time zone').fetchone()
@@ -38,7 +35,7 @@ def test_timestamp():
 
 def test_Interval():
     value, = cu.execute("SELECT now()-'1979-07-07'").fetchone()
-    roundtrip_stamp('z', value)
+    roundtrip_value(cu, 'z', value)
 
 def test_interval():
     value, = cu.execute("SELECT now()-'1979-07-07'").fetchone()

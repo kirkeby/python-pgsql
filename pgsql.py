@@ -24,6 +24,7 @@ See the README file for an overview of this module's contents.
 """
 
 from time import localtime, strptime
+from decimal import Decimal
 
 import _pgsql
 from _pgsql import TRANS_ACTIVE, TRANS_IDLE, \
@@ -107,11 +108,15 @@ def typecast_interval(value):
                              + time.second,
                      microseconds=time.microsecond)
 
+def typecast_numeric(value):
+    return Decimal(value)
+
 typecasts = {
     'date': typecast_date,
     'datetime': typecast_datetime,
     'time': typecast_time,
     'interval': typecast_interval,
+    'numeric': typecast_numeric,
 }
 def typecast(typ, value):
     if value is None:
@@ -440,7 +445,7 @@ class TypeCode:
 
 STRING = TypeCode('string')
 BINARY = TypeCode('binary')
-NUMBER = TypeCode('integer', 'long', 'double', 'money', 'bool')
+NUMBER = TypeCode('integer', 'long', 'float', 'numeric', 'money', 'bool')
 DATETIME = TypeCode('date', 'datetime', 'time', 'interval')
 ROWID = TypeCode('oid')
 

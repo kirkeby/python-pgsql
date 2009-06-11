@@ -15,11 +15,6 @@
   - Reference:
     http://archives.postgresql.org/pgsql-announce/2006-09/msg00002.php
 
-* Work through the reqirements in tests/README:
-   - all integral number-types must be returned as long.
-   - non-lossy decimal types must be returned as decimal.
-   - lossy decimal types must be returned as float.
-
 * The datetime-handling of microseconds causes
     DeprecationWarning: integer argument expected, got float
   from the datetime classes; floating-point seconds should be recast

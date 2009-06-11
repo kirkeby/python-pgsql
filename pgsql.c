@@ -961,7 +961,6 @@ _pg_fetch_cell(PGresult *result, int row, int col)
 	case XIDOID:
 	    ret = PyLong_FromString(cell, NULL, 10);
 	    break;
-	case NUMERICOID:
 	case FLOAT8OID:
 	case FLOAT4OID:
 	    {
@@ -1002,6 +1001,7 @@ _pg_fetch_cell(PGresult *result, int row, int col)
 	case INTERVALOID:
 	case TIMEOID:
 	case TIMETZOID:
+	case NUMERICOID:
         /* .. and these are actual character string types */
 	case BPCHAROID:
 	case VARCHAROID:
@@ -1269,9 +1269,11 @@ static PyObject *_pgsource_typecode(int typecode)
 	    tc = PyString_FromString("oid");
 	    break;
 	case NUMERICOID:
+	    tc = PyString_FromString("numeric");
+	    break;
 	case FLOAT8OID:
 	case FLOAT4OID:
-	    tc = PyString_FromString("double");
+	    tc = PyString_FromString("float");
 	    break;
 	case BYTEAOID:
 	    tc = PyString_FromString("binary");
