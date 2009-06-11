@@ -1,3 +1,6 @@
+* Run all the tests with all three different kinds of cursor (normal,
+  prepared and server-side.)
+
 * Remove the dict extensions methods, and other spurious extensions to the
   DB API; methods like this should instead go in an external DB-API compatible
   helper library (which could also translate between the different bind
@@ -12,6 +15,7 @@
   - Fix description of bind-parameters.
   - Describe str/unicode handling.
   - Remove refernces to dead extensions methods.
+  - Describe connection.typecasts configuration.
   - Reference:
     http://archives.postgresql.org/pgsql-announce/2006-09/msg00002.php
 

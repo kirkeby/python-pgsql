@@ -55,6 +55,9 @@ paramstyle = 'numeric'
 
 # convert to Python types the values that were not automatically
 # converted by pgsql.c
+def typecast_string(value):
+    return value.decode('utf-8', 'strict')
+
 def typecast_date(value):
     t = strptime(value, '%Y-%m-%d')
     return Date(*t[:3])
@@ -111,24 +114,26 @@ def typecast_interval(value):
 def typecast_numeric(value):
     return Decimal(value)
 
-typecasts = {
+default_typecasts = {
     'date': typecast_date,
     'datetime': typecast_datetime,
     'time': typecast_time,
     'interval': typecast_interval,
     'numeric': typecast_numeric,
+    'string': typecast_string,
 }
-def typecast(typ, value):
+def typecast(typ, casts, value):
     if value is None:
         return value
-    if typ in typecasts:
-        return typecasts[typ](value)
+    if typ in casts:
+        return casts[typ](value)
     return value
 
 ### cursor object
 class Cursor(object):
-    def __init__(self, src):
+    def __init__(self, src, connection):
         self._source = src
+        self.typecasts = connection.typecasts
 
     def close(self):
         self._source.close()
@@ -186,7 +191,8 @@ class Cursor(object):
 
     def _typecast(self, row):
         types = zip(*self.description)[1]
-        return tuple(typecast(t, v) for t, v in zip(types, row))
+        casts = self.typecasts
+        return tuple(typecast(t, casts, v) for t, v in zip(types, row))
 
     # extensions
     # FIXME - remove these.
@@ -267,8 +273,8 @@ class PreparedCursor(Cursor):
 
 # A cursor for large SELECTs that uses server side cursors
 class IterCursor(Cursor):
-    def __init__(self, source):
-        Cursor.__init__(self, source)
+    def __init__(self, source, *args):
+        Cursor.__init__(self, source, *args)
         self.active = 0
         # we need a fairly random name for our cursor executions
         self.name = "c%ss%s" % (hex(abs(id(self))), hex(abs(id(source))))
@@ -344,6 +350,7 @@ class IterCursor(Cursor):
 class Database(object):
     def __init__(self, cnx):
         self.__cnx = cnx
+        self.typecasts = default_typecasts.copy()
         # for prepared statement cache
         self.__cache = {}
 
@@ -393,11 +400,11 @@ class Database(object):
 
     def cursor(self):
         src = self.__cnx.source()
-        return Cursor(src)
+        return Cursor(src, self)
 
     def itercursor(self):
         src = self.__cnx.source()
-        return IterCursor(src)
+        return IterCursor(src, self)
 
     def prepare(self, sql):
         sql = sql.strip()

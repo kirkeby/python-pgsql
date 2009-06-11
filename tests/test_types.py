@@ -1,3 +1,5 @@
+from prelude import roundtrip_value
+
 create_statements = [
     'CREATE TEMPORARY TABLE bin(a bytea)',
     'CREATE TEMPORARY TABLE txt(a text)',
@@ -70,3 +72,7 @@ def test_character_types():
 def check_character_type(t):
     cu.execute("SELECT '117'::%s" % t)
     assert cu.description[0][1] == dbapi.STRING, cu.description[0][1]
+
+def test_without_string_typecast():
+    del cnx.typecasts['string']
+    assert isinstance(roundtrip_value(cu, 'txt', 'abc'), str)

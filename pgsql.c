@@ -1008,8 +1008,7 @@ _pg_fetch_cell(PGresult *result, int row, int col)
 	case NAMEOID:
 	case CHAROID:
 	case TEXTOID:
-	    /* It is assumed that null character terminates these strings */
-	    ret = PyUnicode_DecodeUTF8(cell, cellsize, "strict");
+	    ret = PyString_FromStringAndSize(cell, cellsize);
 	    break;
 	case BYTEAOID:
 	    if (PQfformat(result, col) == 0) {
