@@ -1,0 +1,3 @@
+include *.c *.h
+include COPYRIGHT NEWS TODO
+include test tests/*.py

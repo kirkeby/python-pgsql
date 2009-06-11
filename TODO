@@ -15,8 +15,6 @@
 * Fix broken bind-parameter supprt, by translating '... %s .. %s' into
   '... $1 .. $2' behind the scenes.
 
-* Clean up setup.py (*shudder*).
-
 * Update documentation:
   - Fix description of bind-parameters.
   - Describe str/unicode handling.
