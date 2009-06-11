@@ -537,10 +537,14 @@ static pgparams *_pgsource_getparams(PyObject *params)
                 return NULL;
             }
             ret->mustFree[i] = 1;
+#if(SIZEOF_LONG > 4)
+            ret->paramTypes[i] = INT8OID;
+#else
             if (PyInt_Check(param))
                 ret->paramTypes[i] = INT4OID;
             else
                 ret->paramTypes[i] = INT8OID;
+#endif
             Py_DECREF(str);
         } else if (PyString_Check(param)) {
             Py_ssize_t len;
@@ -961,7 +965,11 @@ _pg_fetch_cell(PGresult *result, int row, int col)
         case INT8OID:
         case OIDOID:
         case XIDOID:
+#if(SIZEOF_LONG > 4)
+            ret = PyInt_FromString(cell, NULL, 10);
+#else
             ret = PyLong_FromString(cell, NULL, 10);
+#endif
             break;
         case FLOAT8OID:
         case FLOAT4OID:
@@ -1263,7 +1271,11 @@ static PyObject *_pgsource_typecode(int typecode)
             tc = PyString_FromString("integer");
             break;
         case INT8OID:
+#if(SIZEOF_LONG > 4)
+            tc = PyString_FromString("integer");
+#else
             tc = PyString_FromString("long");
+#endif
             break;
         case OIDOID:
         case XIDOID:

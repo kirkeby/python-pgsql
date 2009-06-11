@@ -1,4 +1,3 @@
-import sys
 from prelude import roundtrip_value
 from decimal import Decimal
 
@@ -12,14 +11,15 @@ create_statements = [
 def test_integer():
     assert isinstance(roundtrip_value(cu, 'z', 42), int)
     assert isinstance(roundtrip_value(cu, 'z', 42L), int)
+    assert isinstance(roundtrip_value(cu, 'z', 2**31-1), int)
 
 def test_float_into_integer():
     assert isinstance(roundtrip_value(cu, 'z', 42.0), int)
 
 def test_bigint():
-    assert isinstance(roundtrip_value(cu, 'w', 42), long)
-    assert isinstance(roundtrip_value(cu, 'w', 42L), long)
-    assert isinstance(roundtrip_value(cu, 'w', sys.maxint+1), long)
+    assert isinstance(roundtrip_value(cu, 'w', 42), (int, long))
+    assert isinstance(roundtrip_value(cu, 'w', 42L), (int, long))
+    assert isinstance(roundtrip_value(cu, 'w', 2**31), (int, long))
 
 def test_real():
     assert isinstance(roundtrip_value(cu, 'x', 1.5), float)
