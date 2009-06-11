@@ -1,7 +1,13 @@
+* Expand tabs in sources.
+
+* Explicitly handle unicode SQL strings.
+
 * Run all the tests with all three different kinds of cursor (normal,
   prepared and server-side.)
 
 * Fix FIXMEs.
+
+* Remove support for non-standard param-passing styles.
 
 * Remove the dict extensions methods, and other spurious extensions to the
   DB API; methods like this should instead go in an external DB-API compatible
