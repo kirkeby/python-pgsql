@@ -125,113 +125,113 @@ db = pgsql.connect(host="localhost", database="mydb",
 db.commit()
 db.rollback()
 db.close()
-	pretty much self explanatory methods
+        pretty much self explanatory methods
 db.cursor()
-	returns a storage cursor
+        returns a storage cursor
 db.itercursor()
-	returns an iterator cursor
+        returns an iterator cursor
 db.prepare(query)
-	sends the query to the server and prepares it for execution.
-	returns a storage cursor that can be used for
-	checking/fetching the resuklts of the query. Bind parameters
-	are allowed in the query, to be supplied later as a lone tuple
-	in the execute() method of the returned cursor.
+        sends the query to the server and prepares it for execution.
+        returns a storage cursor that can be used for
+        checking/fetching the resuklts of the query. Bind parameters
+        are allowed in the query, to be supplied later as a lone tuple
+        in the execute() method of the returned cursor.
 db.execute(query [, params])
-	executes a query, returns a storage cursor that can be used to
-	fetch results. This is a shorthand for:
-	    cu = db.cursor()
-	    cu.execute(query [, params])
-	    return cu
+        executes a query, returns a storage cursor that can be used to
+        fetch results. This is a shorthand for:
+            cu = db.cursor()
+            cu.execute(query [, params])
+            return cu
 db.bulkload(tablename, rows, fieldnames)
         inserts into the named table the list of rows. Each row in the
-	rows list is a tuple containg values for each column in the
-	fieldnames tuple. rows can be a tuple, list or iterator. Example:
-	db.bulkload("customers", [("john", "smith")], ("first", "last"))
+        rows list is a tuple containg values for each column in the
+        fieldnames tuple. rows can be a tuple, list or iterator. Example:
+        db.bulkload("customers", [("john", "smith")], ("first", "last"))
 db.escape_string(s)  [extension]
 db.escape_bytea(s)   [extension]
-	For those cases when one must absolutely inject user-supplied
-	data in a query string, these functions can be used to escape
-	a string, or a binary string respectively. These are supposed
-	to offer protection against SQL injection attacks - although
-	using bind paramaters is still the safest way to go about
-	sending and retrieving user-supplied data to and from the
-	server.
+        For those cases when one must absolutely inject user-supplied
+        data in a query string, these functions can be used to escape
+        a string, or a binary string respectively. These are supposed
+        to offer protection against SQL injection attacks - although
+        using bind paramaters is still the safest way to go about
+        sending and retrieving user-supplied data to and from the
+        server.
 db.unescape_bytea(s) [extension]
-	BYTEA type columns are automatically unescaped by the C layer
-	when results are retrieved from the server side. Usually there
-	is no need to use this when working with BYTEA columns;
-	however, if you use the encode_bytea to insert binary strings
-	into regular CHAR/VARCHAR columns, you will need to use
-	unescape_bytea on the retrieved results.
+        BYTEA type columns are automatically unescaped by the C layer
+        when results are retrieved from the server side. Usually there
+        is no need to use this when working with BYTEA columns;
+        however, if you use the encode_bytea to insert binary strings
+        into regular CHAR/VARCHAR columns, you will need to use
+        unescape_bytea on the retrieved results.
 db.notices          [extension]
 db.setnotices(bool) [extension]
-	db.notices is list of preformatted server notice strings. You
-	can enable the capture of server notices by calling
-	db.setnotices(True|False). By default, notices are not collected
-	by the database object. Every call to setnotices() will reset the
-	notices list, regardless of the enable flag (therefore you
-	should save notices beforehand, if you need them)
+        db.notices is list of preformatted server notice strings. You
+        can enable the capture of server notices by calling
+        db.setnotices(True|False). By default, notices are not collected
+        by the database object. Every call to setnotices() will reset the
+        notices list, regardless of the enable flag (therefore you
+        should save notices beforehand, if you need them)
 
 
 CURSORS:
 -------
 cu.execute(query [, params])
-	executes the query (with optional bind parameters). If bind
-	parameters are used (denoted by $1, $2, etc. in the query
-	string) then params must be a sequence (tuple, list) and its
-	length must match the number of bind parameters in the query.
+        executes the query (with optional bind parameters). If bind
+        parameters are used (denoted by $1, $2, etc. in the query
+        string) then params must be a sequence (tuple, list) and its
+        length must match the number of bind parameters in the query.
 
-	Note: For prepared cursors, the execute methdo becomes
-	cu.execute(params). If there are no bind parameters in the
-	prepared query, then params must be passed as None.
+        Note: For prepared cursors, the execute methdo becomes
+        cu.execute(params). If there are no bind parameters in the
+        prepared query, then params must be passed as None.
 
 cu.executemany(query, param_list)
-	param_list must be a list of tuples; conceptually similar to:
-		cu = db.prepare(query)
-		for param in param_list:
-		    cu.execute(param)
+        param_list must be a list of tuples; conceptually similar to:
+                cu = db.prepare(query)
+                for param in param_list:
+                    cu.execute(param)
 cu.fetchone()
 cu.fetchmany(n)
 cu.fetchall()
-	standard result retrieval methods for getting one, a number n
-	or all of the rows from a previous execute.
+        standard result retrieval methods for getting one, a number n
+        or all of the rows from a previous execute.
 
 cu.description
 cu.rowcount
-	standard DB API 2.0 attributes containing the information
-	about the properties of each column in the result set and the
-	number of rows returned by the last select query, respectively
+        standard DB API 2.0 attributes containing the information
+        about the properties of each column in the result set and the
+        number of rows returned by the last select query, respectively
 
 cu.fields
-	[extension] - returns a tuple with the column names from the
-	last select, in select order
+        [extension] - returns a tuple with the column names from the
+        last select, in select order
 cu.nfields
-	[extension] - same as len(cu,fields)
+        [extension] - same as len(cu,fields)
 cu.rownumber
-	[extension] - for storage cursors, the current row number when
-	processing with fetchone()/fetchmany(n)
+        [extension] - for storage cursors, the current row number when
+        processing with fetchone()/fetchmany(n)
 cu.fetchonedict()
-	[extension] - like fetchone() but returns a dictionary instead
-	of a tuple for the current row. Similar to:
-	    dict( zip( cu.fields, cu,fetchone() ) )
+        [extension] - like fetchone() but returns a dictionary instead
+        of a tuple for the current row. Similar to:
+            dict( zip( cu.fields, cu,fetchone() ) )
 cu.fetchalldict()
-	[extension] - ditto
+        [extension] - ditto
 cu.escape_string(s)  [extension]
 cu.escape_bytea(s)   [extension]
-	For those cases when one must absolutely inject user-supplied
-	data in a query string, these functions can be used to escape
-	a string, or a binary string respectively. These are supposed
-	to offer protection against SQL injection attacks - although
-	using bind paramaters is still the safest way to go about
-	sending and retrieving user-supplied data to and from the
-	server.
+        For those cases when one must absolutely inject user-supplied
+        data in a query string, these functions can be used to escape
+        a string, or a binary string respectively. These are supposed
+        to offer protection against SQL injection attacks - although
+        using bind paramaters is still the safest way to go about
+        sending and retrieving user-supplied data to and from the
+        server.
 cu.unescape_bytea(s) [extension]
-	BYTEA type columns are automatically unescaped by the C layer
-	when results are retrieved from the server side. Usually there
-	is no need to use this when working with BYTEA columns;
-	however, if you use the encode_bytea to insert binary strings
-	into regular CHAR/VARCHAR columns, you will need to use
-	unescape_bytea on the retrieved results.
+        BYTEA type columns are automatically unescaped by the C layer
+        when results are retrieved from the server side. Usually there
+        is no need to use this when working with BYTEA columns;
+        however, if you use the encode_bytea to insert binary strings
+        into regular CHAR/VARCHAR columns, you will need to use
+        unescape_bytea on the retrieved results.
 
 NOTE: items marked with [extension] are extensions to the DB API 2.0
 api provided solely by this module and SHOULD NOT BE RELIED ON FOR

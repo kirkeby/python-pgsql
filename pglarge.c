@@ -35,11 +35,11 @@
 /* pg large object */
 typedef struct
 {
-	PyObject_HEAD
-	pgobject	*pgcnx;		/* parent connection object */
-	Oid		lo_oid;		/* large object oid */
-	int		lo_fd;		/* large object fd */
-}	pglargeobject;
+        PyObject_HEAD
+        pgobject        *pgcnx;                /* parent connection object */
+        Oid                lo_oid;                /* large object oid */
+        int                lo_fd;                /* large object fd */
+}        pglargeobject;
 
 staticforward PyTypeObject PglargeType;
 
@@ -53,25 +53,25 @@ static int
 check_lo_obj(pglargeobject *self, int level)
 {
     if (!check_pg_obj(self->pgcnx))
-	return 0;
+        return 0;
 
     if (!self->lo_oid) {
-	PyErr_SetString(IntegrityError, "object is not valid (null oid).");
-	return 0;
+        PyErr_SetString(IntegrityError, "object is not valid (null oid).");
+        return 0;
     }
 
     if (level & CHECK_OPEN) {
-	if (self->lo_fd < 0) {
-	    PyErr_SetString(PyExc_IOError, "object is not opened.");
-	    return 0;
-	}
+        if (self->lo_fd < 0) {
+            PyErr_SetString(PyExc_IOError, "object is not opened.");
+            return 0;
+        }
     }
 
     if (level & CHECK_CLOSE) {
-	if (self->lo_fd >= 0) {
-	    PyErr_SetString(PyExc_IOError, "object is already opened.");
-	    return 0;
-	}
+        if (self->lo_fd >= 0) {
+            PyErr_SetString(PyExc_IOError, "object is already opened.");
+            return 0;
+        }
     }
 
     return 1;
@@ -88,7 +88,7 @@ pglarge_new(pgobject *pgcnx, Oid oid)
     pglargeobject *npglo;
 
     if ((npglo = PyObject_NEW(pglargeobject, &PglargeType)) == NULL)
-	return NULL;
+        return NULL;
 
     Py_XINCREF(pgcnx);
     npglo->pgcnx = pgcnx;
@@ -103,7 +103,7 @@ static void
 pglarge_dealloc(pglargeobject * self)
 {
     if (self->lo_fd >= 0 && check_pg_obj(self->pgcnx))
-	lo_close(self->pgcnx->cnx, self->lo_fd);
+        lo_close(self->pgcnx->cnx, self->lo_fd);
     self->lo_fd = -1;
     self->lo_oid = 0;
     Py_XDECREF(self->pgcnx);
@@ -121,19 +121,19 @@ pglarge_open(pglargeobject *self, PyObject *args)
 
     /* check validity */
     if (!check_lo_obj(self, CHECK_CLOSE))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "i:open", &mode)) {
-	    PyErr_SetString(PyExc_TypeError, "open(mode), with mode(integer).");
-	    return NULL;
-	}
+            PyErr_SetString(PyExc_TypeError, "open(mode), with mode(integer).");
+            return NULL;
+        }
 
     mode &= (INV_READ|INV_WRITE);
     /* opens large object */
     if ((fd = lo_open(self->pgcnx->cnx, self->lo_oid, mode)) < 0) {
-	PyErr_SetString(PyExc_IOError, "can't open large object.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "can't open large object.");
+        return NULL;
     }
     self->lo_fd = fd;
 
@@ -150,19 +150,19 @@ pglarge_close(pglargeobject *self, PyObject *args)
 {
     /* checks args */
     if (!PyArg_ParseTuple(args, ":close")) {
-	PyErr_SetString(PyExc_TypeError,
-			"method close() takes no parameters.");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "method close() takes no parameters.");
+        return NULL;
     }
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_OPEN))
-	return NULL;
+        return NULL;
 
     /* closes large object */
     if (lo_close(self->pgcnx->cnx, self->lo_fd)) {
-	PyErr_SetString(PyExc_IOError, "error while closing large object fd.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while closing large object fd.");
+        return NULL;
     }
     self->lo_fd = -1;
 
@@ -178,31 +178,31 @@ static char pglarge_read__doc__[] =
 static PyObject *
 pglarge_read(pglargeobject *self, PyObject *args)
 {
-    int		size;
+    int                size;
     PyObject   *buffer;
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_OPEN))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "i:read", &size)) {
-	PyErr_SetString(PyExc_TypeError, "read(size), wih size (integer).");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError, "read(size), wih size (integer).");
+        return NULL;
     }
 
     if (size <= 0) {
-	PyErr_SetString(PyExc_ValueError, "size must be positive.");
-	return NULL;
+        PyErr_SetString(PyExc_ValueError, "size must be positive.");
+        return NULL;
     }
 
     /* allocate buffer and runs read */
     buffer = PyString_FromStringAndSize((char *) NULL, size);
 
     if ((size = lo_read(self->pgcnx->cnx, self->lo_fd, BUF(buffer), size)) < 0) {
-	PyErr_SetString(PyExc_IOError, "error while reading.");
-	Py_XDECREF(buffer);
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while reading.");
+        Py_XDECREF(buffer);
+        return NULL;
     }
 
     /* resize buffer and returns it */
@@ -218,24 +218,24 @@ static PyObject *
 pglarge_write(pglargeobject *self, PyObject *args)
 {
     char *buffer;
-    int	size, bufsize;
+    int        size, bufsize;
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_OPEN))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "s#:write", &buffer, &bufsize)) {
-	PyErr_SetString(PyExc_TypeError,
-			"write(buffer), with buffer (sized string).");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "write(buffer), with buffer (sized string).");
+        return NULL;
     }
 
     /* sends query */
     if ((size = lo_write(self->pgcnx->cnx, self->lo_fd, buffer,
-			 bufsize)) < bufsize) {
-	PyErr_SetString(PyExc_IOError, "buffer truncated during write.");
-	return NULL;
+                         bufsize)) < bufsize) {
+        PyErr_SetString(PyExc_IOError, "buffer truncated during write.");
+        return NULL;
     }
 
     /* no error : returns Py_None */
@@ -258,19 +258,19 @@ pglarge_lseek(pglargeobject * self, PyObject * args)
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_OPEN))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "ii:lseek", &offset, &whence)) {
-	PyErr_SetString(PyExc_TypeError,
-			"lseek(offset, whence), with offset and whence (integers).");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "lseek(offset, whence), with offset and whence (integers).");
+        return NULL;
     }
 
     /* sends query */
     if ((ret = lo_lseek(self->pgcnx->cnx, self->lo_fd, offset, whence)) == -1) {
-	PyErr_SetString(PyExc_IOError, "error while moving cursor.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while moving cursor.");
+        return NULL;
     }
 
     /* returns position */
@@ -289,32 +289,32 @@ pglarge_size(pglargeobject *self, PyObject *args)
 
     /* checks args */
     if (!PyArg_ParseTuple(args, ":size")) {
-	PyErr_SetString(PyExc_TypeError,
-			"method size() takes no parameters.");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "method size() takes no parameters.");
+        return NULL;
     }
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_OPEN))
-	return NULL;
+        return NULL;
 
     /* gets current position */
     if ((start = lo_tell(self->pgcnx->cnx, self->lo_fd)) == -1) {
-	PyErr_SetString(PyExc_IOError, "error while getting current position.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while getting current position.");
+        return NULL;
     }
 
     /* gets end position */
     if ((end = lo_lseek(self->pgcnx->cnx, self->lo_fd, 0, SEEK_END)) == -1) {
-	PyErr_SetString(PyExc_IOError, "error while getting end position.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while getting end position.");
+        return NULL;
     }
 
     /* move back to start position */
     if ((start = lo_lseek(self->pgcnx->cnx, self->lo_fd, start, SEEK_SET)) == -1) {
-	PyErr_SetString(PyExc_IOError,
-			"error while moving back to first position.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError,
+                        "error while moving back to first position.");
+        return NULL;
     }
 
     /* returns size */
@@ -328,23 +328,23 @@ static char pglarge_tell__doc__[] =
 static PyObject *
 pglarge_tell(pglargeobject * self, PyObject * args)
 {
-    int			start;
+    int                        start;
 
     /* checks args */
     if (!PyArg_ParseTuple(args, ":tell")) {
-	PyErr_SetString(PyExc_TypeError,
-			"method tell() takes no parameters.");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "method tell() takes no parameters.");
+        return NULL;
     }
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_OPEN))
-	return NULL;
+        return NULL;
 
     /* gets current position */
     if ((start = lo_tell(self->pgcnx->cnx, self->lo_fd)) == -1) {
-	PyErr_SetString(PyExc_IOError, "error while getting position.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while getting position.");
+        return NULL;
     }
 
     /* returns size */
@@ -359,23 +359,23 @@ static char pglarge_export__doc__[] =
 static PyObject *
 pglarge_export(pglargeobject *self, PyObject *args)
 {
-    char	   *name;
+    char           *name;
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_CLOSE))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "s", &name)) {
-	PyErr_SetString(PyExc_TypeError,
-			"export(filename), with filename (string).");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "export(filename), with filename (string).");
+        return NULL;
     }
 
     /* runs command */
     if (!lo_export(self->pgcnx->cnx, self->lo_oid, name)) {
-	PyErr_SetString(PyExc_IOError, "error while exporting large object.");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while exporting large object.");
+        return NULL;
     }
 
     Py_INCREF(Py_None);
@@ -392,19 +392,19 @@ pglarge_unlink(pglargeobject * self, PyObject * args)
 {
     /* checks args */
     if (!PyArg_ParseTuple(args, ":unlink")) {
-	PyErr_SetString(PyExc_TypeError,
-			"method unlink() takes no parameters.");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "method unlink() takes no parameters.");
+        return NULL;
     }
 
     /* checks validity */
     if (!check_lo_obj(self, CHECK_CLOSE))
-	return NULL;
+        return NULL;
 
     /* deletes the object, invalidate it on success */
     if (!lo_unlink(self->pgcnx->cnx, self->lo_oid)) {
-	PyErr_SetString(PyExc_IOError, "error while unlinking large object");
-	return NULL;
+        PyErr_SetString(PyExc_IOError, "error while unlinking large object");
+        return NULL;
     }
     self->lo_oid = 0;
 
@@ -414,16 +414,16 @@ pglarge_unlink(pglargeobject * self, PyObject * args)
 
 /* large object methods */
 static struct PyMethodDef pglarge_methods[] = {
-	{"open", (PyCFunction) pglarge_open, METH_VARARGS, pglarge_open__doc__},
-	{"close", (PyCFunction) pglarge_close, METH_VARARGS, pglarge_close__doc__},
-	{"read", (PyCFunction) pglarge_read, METH_VARARGS, pglarge_read__doc__},
-	{"write", (PyCFunction) pglarge_write, METH_VARARGS, pglarge_write__doc__},
-	{"seek", (PyCFunction) pglarge_lseek, METH_VARARGS, pglarge_seek__doc__},
-	{"size", (PyCFunction) pglarge_size, METH_VARARGS, pglarge_size__doc__},
-	{"tell", (PyCFunction) pglarge_tell, METH_VARARGS, pglarge_tell__doc__},
-	{"export",(PyCFunction) pglarge_export,METH_VARARGS,pglarge_export__doc__},
-	{"unlink",(PyCFunction) pglarge_unlink,METH_VARARGS,pglarge_unlink__doc__},
-	{NULL, NULL}
+        {"open", (PyCFunction) pglarge_open, METH_VARARGS, pglarge_open__doc__},
+        {"close", (PyCFunction) pglarge_close, METH_VARARGS, pglarge_close__doc__},
+        {"read", (PyCFunction) pglarge_read, METH_VARARGS, pglarge_read__doc__},
+        {"write", (PyCFunction) pglarge_write, METH_VARARGS, pglarge_write__doc__},
+        {"seek", (PyCFunction) pglarge_lseek, METH_VARARGS, pglarge_seek__doc__},
+        {"size", (PyCFunction) pglarge_size, METH_VARARGS, pglarge_size__doc__},
+        {"tell", (PyCFunction) pglarge_tell, METH_VARARGS, pglarge_tell__doc__},
+        {"export",(PyCFunction) pglarge_export,METH_VARARGS,pglarge_export__doc__},
+        {"unlink",(PyCFunction) pglarge_unlink,METH_VARARGS,pglarge_unlink__doc__},
+        {NULL, NULL}
 };
 
 /* get attribute */
@@ -434,48 +434,48 @@ pglarge_getattr(pglargeobject * self, char *name)
 
     /* associated pg connection object */
     if (!strcmp(name, "pgcnx")) {
-	if (check_lo_obj(self, 0)) {
-	    Py_INCREF(self->pgcnx);
-	    return (PyObject *) (self->pgcnx);
-	}
+        if (check_lo_obj(self, 0)) {
+            Py_INCREF(self->pgcnx);
+            return (PyObject *) (self->pgcnx);
+        }
 
-	Py_INCREF(Py_None);
-	return Py_None;
+        Py_INCREF(Py_None);
+        return Py_None;
     }
 
     /* large object oid */
     if (!strcmp(name, "oid")) {
-	if (check_lo_obj(self, 0))
-	    return PyInt_FromLong(self->lo_oid);
+        if (check_lo_obj(self, 0))
+            return PyInt_FromLong(self->lo_oid);
 
-	Py_INCREF(Py_None);
-	return Py_None;
+        Py_INCREF(Py_None);
+        return Py_None;
     }
 
     /* error (status) message */
     if (!strcmp(name, "error"))
-	return PyString_FromString(PQerrorMessage(self->pgcnx->cnx));
+        return PyString_FromString(PQerrorMessage(self->pgcnx->cnx));
 
     /* attributes list */
     if (!strcmp(name, "__members__")) {
-	PyObject   *list = PyList_New(3);
+        PyObject   *list = PyList_New(3);
 
-	if (list) {
-	    PyList_SET_ITEM(list, 0, PyString_FromString("oid"));
-	    PyList_SET_ITEM(list, 1, PyString_FromString("pgcnx"));
-	    PyList_SET_ITEM(list, 2, PyString_FromString("error"));
-	}
+        if (list) {
+            PyList_SET_ITEM(list, 0, PyString_FromString("oid"));
+            PyList_SET_ITEM(list, 1, PyString_FromString("pgcnx"));
+            PyList_SET_ITEM(list, 2, PyString_FromString("error"));
+        }
 
-	return list;
+        return list;
     }
 
     /* module name */
     if (!strcmp(name, "__module__"))
-	return PyString_FromString(MODULE_NAME);
+        return PyString_FromString(MODULE_NAME);
 
     /* class name */
     if (!strcmp(name, "__class__"))
-	return PyString_FromString("pglarge");
+        return PyString_FromString("pglarge");
 
     /* seeks name in methods (fallback) */
     return Py_FindMethod(pglarge_methods, (PyObject *) self, name);
@@ -486,12 +486,12 @@ static int
 pglarge_print(pglargeobject *self, FILE *fp, int flags)
 {
     if (!check_lo_obj(self, 0)) {
-	fprintf(fp, "<Invalid/Unlinked large object>");
-	return 0;
+        fprintf(fp, "<Invalid/Unlinked large object>");
+        return 0;
     }
     if (self->lo_fd >= 0) {
-	fprintf(fp, "<Opened large object, oid=%ld>", (long) self->lo_oid);
-	return 0;
+        fprintf(fp, "<Opened large object, oid=%ld>", (long) self->lo_oid);
+        return 0;
     }
     fprintf(fp, "<Closed large object, oid=%ld>", (long) self->lo_oid);
     return 0;
@@ -499,23 +499,23 @@ pglarge_print(pglargeobject *self, FILE *fp, int flags)
 
 /* object type definition */
 staticforward PyTypeObject PglargeType = {
-	PyObject_HEAD_INIT(NULL)
-	0,				/* ob_size */
-	"pglarge",			/* tp_name */
-	sizeof(pglargeobject),		/* tp_basicsize */
-	0,				/* tp_itemsize */
+        PyObject_HEAD_INIT(NULL)
+        0,                                /* ob_size */
+        "pglarge",                        /* tp_name */
+        sizeof(pglargeobject),                /* tp_basicsize */
+        0,                                /* tp_itemsize */
 
-	/* methods */
-	(destructor) pglarge_dealloc,	/* tp_dealloc */
-	(printfunc) pglarge_print,	/* tp_print */
-	(getattrfunc) pglarge_getattr,	/* tp_getattr */
-	0,				/* tp_setattr */
-	0,				/* tp_compare */
-	0,				/* tp_repr */
-	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
-	0,				/* tp_as_mapping */
-	0,				/* tp_hash */
+        /* methods */
+        (destructor) pglarge_dealloc,        /* tp_dealloc */
+        (printfunc) pglarge_print,        /* tp_print */
+        (getattrfunc) pglarge_getattr,        /* tp_getattr */
+        0,                                /* tp_setattr */
+        0,                                /* tp_compare */
+        0,                                /* tp_repr */
+        0,                                /* tp_as_number */
+        0,                                /* tp_as_sequence */
+        0,                                /* tp_as_mapping */
+        0,                                /* tp_hash */
 };
 
 /* creates large object */
@@ -528,20 +528,20 @@ static PyObject * pg_locreate(pgobject *self, PyObject * args)
 
     /* checks validity */
     if (!check_pg_obj(self))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "i:locreate", &mode)) {
-	PyErr_SetString(PyExc_TypeError,
-			"locreate(mode), with mode (integer).");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError,
+                        "locreate(mode), with mode (integer).");
+        return NULL;
     }
 
     /* creates large object */
     lo_oid = lo_creat(self->cnx, mode&(INV_READ|INV_WRITE));
     if (lo_oid == InvalidOid) {
-	PyErr_SetString(OperationalError, "can't create large object.");
-	return NULL;
+        PyErr_SetString(OperationalError, "can't create large object.");
+        return NULL;
     }
     return (PyObject *) pglarge_new(self, lo_oid);
 }
@@ -555,17 +555,17 @@ static PyObject *pg_getlo(pgobject * self, PyObject *args)
 
     /* checks validity */
     if (!check_pg_obj(self))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "i:getlo", &lo_oid)) {
-	PyErr_SetString(PyExc_TypeError, "getlo(oid), with oid (integer).");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError, "getlo(oid), with oid (integer).");
+        return NULL;
     }
 
     if (!lo_oid) {
-	PyErr_SetString(PyExc_ValueError, "the object oid can't be null.");
-	return NULL;
+        PyErr_SetString(PyExc_ValueError, "the object oid can't be null.");
+        return NULL;
     }
 
     /* creates object */
@@ -577,24 +577,24 @@ static char pg_loimport__doc__[] =
 "loimport(filepath) -- create a new large object from specified file.";
 static PyObject *pg_loimport(pgobject *self, PyObject *args)
 {
-    char	*name;
-    Oid		lo_oid;
+    char        *name;
+    Oid                lo_oid;
 
     /* checks validity */
     if (!check_pg_obj(self))
-	return NULL;
+        return NULL;
 
     /* gets arguments */
     if (!PyArg_ParseTuple(args, "s", &name)) {
-	PyErr_SetString(PyExc_TypeError, "loimport(name), with name (string).");
-	return NULL;
+        PyErr_SetString(PyExc_TypeError, "loimport(name), with name (string).");
+        return NULL;
     }
 
     /* imports file and checks result */
     lo_oid = lo_import(self->cnx, name);
     if (lo_oid == 0) {
-	PyErr_SetString(OperationalError, "can't create large object.");
-	return NULL;
+        PyErr_SetString(OperationalError, "can't create large object.");
+        return NULL;
     }
     return (PyObject *) pglarge_new(self, lo_oid);
 }
