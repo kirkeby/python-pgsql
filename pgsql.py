@@ -40,9 +40,6 @@ try: # Python-2.3 doesn't have sets in global namespace
 except NameError:
     from sets import Set as set
 
-### module constants
-version = "0.9.7"
-
 # compliant with DB SIG 2.0
 apilevel = '2.0'
 
@@ -55,9 +52,6 @@ paramstyle = 'numeric'
 
 # convert to Python types the values that were not automatically
 # converted by pgsql.c
-def typecast_string(value):
-    return value.decode('utf-8', 'strict')
-
 def typecast_date(value):
     t = strptime(value, '%Y-%m-%d')
     return Date(*t[:3])
@@ -120,7 +114,6 @@ default_typecasts = {
     'time': typecast_time,
     'interval': typecast_interval,
     'numeric': typecast_numeric,
-    'string': typecast_string,
 }
 def typecast(typ, casts, value):
     if value is None:
@@ -133,6 +126,7 @@ def typecast(typ, casts, value):
 class Cursor(object):
     def __init__(self, src, connection):
         self._source = src
+        self.connection = connection
         self.typecasts = connection.typecasts
 
     def close(self):
@@ -155,14 +149,10 @@ class Cursor(object):
             self._source.execute("START TRANSACTION")
 
     # if parameters are passed in, we'll attempt to bind them
-    def execute(self, operation, *params):
+    def execute(self, operation, params=[]):
         self._start(operation)
-        if not len(params):
-            ret = self._source.execute(operation)
-        elif isinstance(params[0], (list, tuple)):
-            ret = self._source.execute(operation, params[0])
-        else:
-            ret = self._source.execute(operation, params)
+        params = self.connection.encode_params(params)
+        ret = self._source.execute(operation, params)
         if isinstance(ret, int):
             return ret
         return self
@@ -244,23 +234,19 @@ class Cursor(object):
 
 # A cursor class for prepared statements
 class PreparedCursor(Cursor):
-    def __init__(self, source):
-        Cursor.__init__(self, source)
+    def __init__(self, *args):
+        Cursor.__init__(self, *args)
         # make sure we're always in a transaction when we're preparing statements
         if self.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
 
     # we require parameters since we've already bound a query
-    def execute(self, *params):
+    def execute(self, params=[]):
         #self._start()
         if self.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
-        if not len(params):
-            ret = self._source.execute(None)
-        elif isinstance(params[0], (tuple, list)):
-            ret = self._source.execute(params[0])
-        else:
-            ret = self._source.execute(params)
+        params = self.connection.encode_params(params)
+        ret = self._source.execute(params)
         if isinstance(ret, int):
             return ret
         return self
@@ -268,6 +254,10 @@ class PreparedCursor(Cursor):
         #self._start()
         if self.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
+        param_seq = (
+            self.connection.encode_params(params)
+            for params in param_seq
+        )
         ret = self._source.executemany(param_seq)
         return self
 
@@ -279,10 +269,10 @@ class IterCursor(Cursor):
         # we need a fairly random name for our cursor executions
         self.name = "c%ss%s" % (hex(abs(id(self))), hex(abs(id(source))))
 
-    def execute(self, query, *params):
+    def execute(self, query, params=[]):
         query = query.strip()
-        if not query.upper().startswith("SELECT"):
-            return Cursor.execute(self, query, *params)
+        if not query.lower().startswith("select"):
+            return Cursor.execute(self, query, params)
         # we have a select query
         self.close()
         # open up this cursor for select
@@ -292,12 +282,8 @@ class IterCursor(Cursor):
         self._start(operation='insert')
         query = "DECLARE %s NO SCROLL CURSOR WITHOUT HOLD FOR\n%s" %(
             self.name, query)
-        if not len(params):
-            ret = self._source.execute(query)
-        elif isinstance(params[0], (tuple, list)):
-            ret = self._source.execute(query, params[0])
-        else:
-            ret = self._source.execute(query, params)
+        params = self.connection.encode_params(params)
+        ret = self._source.execute(query, params)
         self.active = 1
         return ret
 
@@ -355,6 +341,8 @@ class Database(object):
     def __init__(self, cnx):
         self.__cnx = cnx
         self.typecasts = default_typecasts.copy()
+        self.typecasts['string'] = self.typecast_string
+        self.encoding = 'utf-8'
         # for prepared statement cache
         self.__cache = {}
 
@@ -363,6 +351,17 @@ class Database(object):
             self.close()
         del self.__cache
         del self.__cnx
+
+    def encode_params(self, params):
+        encoded = []
+        for value in params:
+            if isinstance(value, unicode):
+                value = value.encode(self._encoding)
+            encoded.append(value)
+        return encoded
+
+    def typecast_string(self, s):
+        return s.decode(self._encoding)
 
     def close(self):
         # deallocate statements
@@ -389,18 +388,14 @@ class Database(object):
     def rollback(self):
         self.__cnx.execute("ROLLBACK")
 
-    def execute(self, query, *params):
+    def execute(self, query, params=[]):
         # the database's .execute() method does not start transactions
         # automatically
-        if not len(params):
-            ret = self.__cnx.execute(query)
-        elif isinstance(params[0], (tuple, list)):
-            ret = self.__cnx.execute(query, params[0])
-        else:
-            ret = self.__cnx.execute(query, params)
+        params = self.encode_params(params)
+        ret = self.__cnx.execute(query, params)
         if isinstance(ret, int):
             return ret
-        return Cursor(ret)
+        return Cursor(ret, self)
 
     def cursor(self):
         src = self.__cnx.source()
@@ -431,6 +426,14 @@ class Database(object):
         elif self.__dict__.has_key(name):
             return self.__dict__[name]
         raise AttributeError, name
+
+    # FIXME - Should this just be a connect parameter instead?
+    def get_encoding(self):
+        return self._encoding
+    def set_encoding(self, e):
+        self.execute('SET SESSION client_encoding = "%s"' % e)
+        self._encoding = e
+    encoding = property(get_encoding, set_encoding)
 
 ### module interface
 def connect(database=None, user=None, password=None,
@@ -469,8 +472,13 @@ def Time(hour, minute, second):
     return time(hour, minute, second)
 def Timestamp(year, month, day, hour, minute, second):
     return datetime(year, month, day, hour, minute, second)
-def Binary(s):
-    return str(s)
+class Binary:
+    __binary__ = True
+    __pgsql_typeoid__ = 17 # BYTEAOID
+    def __init__(self, s):
+        self.value = str(s)
+    def __str__(self):
+        return self.value
 
 def DateFromTicks(ticks):
     return apply(Date, localtime(ticks)[:3])

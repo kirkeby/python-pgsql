@@ -11,13 +11,13 @@ def test_binary():
     cu.execute('SELECT $1', [dbapi.Binary('abc')])
     assert cu.description[0][1] == dbapi.BINARY
 
-    cu.execute('SELECT $1', ['abc'])
-    assert cu.description[0][1] == dbapi.BINARY
-
     cu.execute('SELECT a FROM bin')
     assert cu.description[0][1] == dbapi.BINARY
 
 def test_unicode():
+    cu.execute('SELECT $1', ['abc'])
+    assert cu.description[0][1] == dbapi.STRING
+
     cu.execute('SELECT $1', [u'abc'])
     assert cu.description[0][1] == dbapi.STRING
 

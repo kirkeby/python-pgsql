@@ -545,31 +545,14 @@ static pgparams *_pgsource_getparams(PyObject *params)
 	} else if (PyString_Check(param)) {
 	    Py_ssize_t len;
 	    PyString_AsStringAndSize(param, &(ret->paramValues[i]), &len);
-            ret->paramTypes[i] = BYTEAOID;
+            ret->paramTypes[i] = TEXTOID;
             ret->paramFormats[i] = 1;
 	    ret->paramLengths[i] = len;
 	} else if (PyUnicode_Check(param)) {
-            /* Encode as UTF-8 */
-            PyObject *str;
-	    Py_ssize_t len;
-            char *c;
-            str = PyUnicode_AsUTF8String(param);
-            PyString_AsStringAndSize(str, &c, &len);
-            /* Clone UTF-8 string into buffer for libpq */
-	    ret->paramValues[i] = (char *) malloc(len);
-            if(ret->paramValues[i] == NULL) {
-                Py_DECREF(str);
-		_pgsource_freeparams(ret);
-		PyErr_SetString(ProgrammingError, "out of memory binding paramaters");
-		return NULL;
-            }
-            memcpy(ret->paramValues[i], c, len);
-            /* Free temporary data and hand clone over to libpq */
-            Py_DECREF(str);
-            ret->mustFree[i] = 1;
-	    ret->paramTypes[i] = VARCHAROID;
-	    ret->paramFormats[i] = 1;
-	    ret->paramLengths[i] = len;
+            _pgsource_freeparams(ret);
+            PyErr_SetString(ProgrammingError,
+                            "unicode strings not supported by C API");
+            return NULL;
 	} else if (PyFloat_Check(param)) {
 	    /* this is kind of lame - could not find any documentation
 	       how to pass a double as a binary */
@@ -592,6 +575,24 @@ static pgparams *_pgsource_getparams(PyObject *params)
 	    PyObject *str = NULL;
 	    Py_ssize_t len;
 	    char *value;
+
+	    if (PyObject_HasAttrString(param, "__pgsql_typeoid__")) {
+		o = PyObject_GetAttrString(param, "__pgsql_typeoid__");
+                if (o == NULL) {
+                    Py_DECREF(param);
+                    _pgsource_freeparams(ret);
+                    return NULL;
+                }
+                if (PyInt_Check(o))
+                    ret->paramTypes[i] = PyInt_AsLong(o);
+                else {
+                    Py_DECREF(param);
+                    _pgsource_freeparams(ret);
+                    PyErr_SetString(ProgrammingError,
+                                    "__pgsql_typeoid__ not an int");
+                    return NULL;
+                }
+            }
 
 	    /* is this an object that needs to be treated as a binary one? */
 	    if (PyObject_HasAttrString(param, "__binary__"))
