@@ -286,7 +286,11 @@ class IterCursor(Cursor):
         # we have a select query
         self.close()
         # open up this cursor for select
-        query = "DECLARE %s NO SCROLL CURSOR WITH HOLD FOR\n%s" %(
+        # FIXME - This is butt fucking ugly. We lie to _start to force a
+        # start transaction, which is required for 'without hold' on the
+        # cursor.
+        self._start(operation='insert')
+        query = "DECLARE %s NO SCROLL CURSOR WITHOUT HOLD FOR\n%s" %(
             self.name, query)
         if not len(params):
             ret = self._source.execute(query)

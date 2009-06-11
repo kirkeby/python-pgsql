@@ -1,6 +1,8 @@
 * Run all the tests with all three different kinds of cursor (normal,
   prepared and server-side.)
 
+* Fix FIXMEs.
+
 * Remove the dict extensions methods, and other spurious extensions to the
   DB API; methods like this should instead go in an external DB-API compatible
   helper library (which could also translate between the different bind
