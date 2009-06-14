@@ -23,11 +23,6 @@
   - Reference:
     http://archives.postgresql.org/pgsql-announce/2006-09/msg00002.php
 
-* The datetime-handling of microseconds causes
-    DeprecationWarning: integer argument expected, got float
-  from the datetime classes; floating-point seconds should be recast
-  as seconds and microseconds arguments to the datetime constructors.
-
 * Release new version (new name?).
 
 * The large objects interface needs some attention as well (note: this is

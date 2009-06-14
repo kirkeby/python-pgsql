@@ -23,6 +23,7 @@ http://www.python.org/peps/pep-0249.html
 See the README file for an overview of this module's contents.
 """
 
+from math import floor, modf
 from time import localtime, strptime
 from decimal import Decimal
 
@@ -57,22 +58,11 @@ def typecast_date(value):
     return Date(*t[:3])
 
 def typecast_datetime(value):
-    if '+' in value:
-        if value.endswith('+00'):
-            value = value[:-3]
-        else:
-            raise NotImplementedError('Can not represent timezones in Python')
-
-    if '.' in value:
-        value, micros = value.split('.')
-        micros = int(micros)
-    else:
-        micros = 0
-
-    t = strptime(value, '%Y-%m-%d %H:%M:%S')
-    t = Timestamp(*t[:6])
-    t.replace(microsecond=micros)
-    return t
+    date, time = value.split(' ', 1)
+    time = typecast_time(time)
+    date = strptime(date, '%Y-%m-%d')
+    return datetime(date[0], date[1], date[2],
+                    time.hour, time.minute, time.second, time.microsecond)
 
 def typecast_time(value):
     if '+' in value:
@@ -83,14 +73,13 @@ def typecast_time(value):
 
     if '.' in value:
         value, micros = value.split('.')
+        micros = micros + ('0' * (6 - len(micros)))
         micros = int(micros)
     else:
         micros = 0
 
     t = strptime(value, '%H:%M:%S')
-    t = Time(*t[3:6])
-    t.replace(microsecond=micros)
-    return t
+    return time(t[3], t[4], t[5], micros)
 
 def typecast_interval(value):
     if ' days ' in value:
@@ -466,12 +455,21 @@ ROWID = TypeCode('oid')
 del TypeCode
 
 # Type-constructors
+def split_second(s):
+    '''Split floating-point second into whole seconds and microseconds.'''
+    ms = 0
+    if isinstance(s, float):
+        ms, s = modf(s)
+    return int(s), int(floor(ms * 1000000.0))
+
 def Date(year, month, day):
     return date(year, month, day)
 def Time(hour, minute, second):
-    return time(hour, minute, second)
+    s, ms = split_second(second)
+    return time(hour, minute, s, ms)
 def Timestamp(year, month, day, hour, minute, second):
-    return datetime(year, month, day, hour, minute, second)
+    s, ms = split_second(second)
+    return datetime(year, month, day, hour, minute, s, ms)
 class Binary:
     __binary__ = True
     __pgsql_typeoid__ = 17 # BYTEAOID
