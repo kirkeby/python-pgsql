@@ -5,6 +5,7 @@ create_statements = [
     'CREATE TEMPORARY TABLE w(a time without time zone)',
 ]
 
+from pgsql import interval
 from prelude import roundtrip_value
 
 def test_null():
@@ -41,16 +42,19 @@ def test_timestamp():
     value, = cu.execute('SELECT now()::timestamp with time zone').fetchone()
     assert value.hour < 24
 
-def test_Interval():
-    value, = cu.execute("SELECT now()-'1979-07-07'").fetchone()
-    roundtrip_value(cu, 'z', value)
+def test_roundtrip_interval():
+    roundtrip_value(cu, 'z', interval())
+    roundtrip_value(cu, 'z', interval(seconds=1))
+    roundtrip_value(cu, 'z', interval(years=1, months=2, days=3))
+
+def test_get_interval():
+    value, = cu.execute("SELECT '1 year'::interval").fetchone()
+    assert isinstance(value, interval)
+    assert value == interval(years=1)
 
 def test_interval():
-    value, = cu.execute("SELECT now()-'1979-07-07'").fetchone()
-    assert value.days > 1
-    value, = cu.execute("SELECT now()-'today'").fetchone()
-    assert value.days == 0
-    assert value.seconds > 0
+    value, = cu.execute("SELECT '42 days'::interval").fetchone()
+    assert value == interval(days=42)
 
 from datetime import time
 

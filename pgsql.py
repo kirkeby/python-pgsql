@@ -81,18 +81,80 @@ def typecast_time(value):
     t = strptime(value, '%H:%M:%S')
     return time(t[3], t[4], t[5], micros)
 
+class interval(object):
+    '''I am a PostgreSQL interval.'''
+    __slots__ = ['years', 'months', 'days', 'hours', 'minutes', 'seconds',
+                 'microseconds']
+
+    def __init__(self, years=0, months=0, days=0,
+                       hours=0, minutes=0, seconds=0, microseconds=0):
+        values = locals()
+        for attr in self.__slots__:
+            setattr(self, attr, values[attr])
+
+    def to_timedelta(self):
+        '''Convert to a datetime.timedelta instance.
+
+        This can fail if I I represent an interval measured in years or
+        months, since these have no fixed length. This error results in
+        a ValueError exception.'''
+        if self.years or self.months:
+            raise ValueError('Interval with years or months cannot be '
+                             'converted to timedelta')
+        seconds = self.hours * 60 * 60 + self.minutes * 60 + self.seconds
+        return timedelta(self.days, seconds, self.microseconds)
+
+    def __eq__(self, other):
+        if not isinstance(other, interval):
+            return NotImplemented
+        for attr in self.__slots__:
+            if getattr(self, attr) <> getattr(other, attr):
+                return False
+        return True
+
+    def __str__(self):
+        pieces = []
+        for attr in self.__slots__:
+            value = getattr(self, attr)
+            if value:
+                pieces.append('%d %s' % (value, attr))
+                if abs(value) == 1:
+                    pieces[-1] = pieces[-1][:-1]
+        if pieces:
+            return ' '.join(pieces)
+        else:
+            return '0 seconds'
+
+    def __repr__(self):
+        pieces = []
+        for attr in self.__slots__:
+            value = getattr(self, attr)
+            if value:
+                pieces.append('%s=%d' % (attr, value))
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(pieces))
+
+denominators = {
+    'day': 'days',
+    'year': 'years',
+    'mon': 'months', 'mons': 'months'
+}
 def typecast_interval(value):
-    if ' days ' in value:
-        days, time = value.split(' days ')
-        days = int(days)
-    else:
-        days, time = 0, value
-    time = typecast_time(time)
-    return timedelta(days=days,
-                     seconds=time.hour * 60 * 60
-                             + time.minute * 60
-                             + time.second,
-                     microseconds=time.microsecond)
+    result = {}
+
+    pieces = value.split()
+    while len(pieces) > 1:
+        value, denominator, pieces = pieces[0], pieces[1], pieces[2:]
+        attribute = denominators.get(denominator, denominator)
+        result[attribute] = int(value)
+
+    if pieces:
+        t = typecast_time(pieces.pop())
+        result['hours'] = t.hour
+        result['minutes'] = t.minute
+        result['seconds'] = t.second
+        result['microseconds'] = t.microsecond
+
+    return interval(**result)
 
 def typecast_numeric(value):
     return Decimal(value)
