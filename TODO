@@ -1,7 +1,9 @@
 * Explicitly handle unicode SQL strings.
 
 * Run all the tests with all three different kinds of cursor (normal,
-  prepared and server-side.)
+  prepared and server-side.) This might not be easy exactly, since
+  the prepared cursor naturally has a different API. But, at the least
+  we should try all the cursor-wielding tests with cursor and itercursors.
 
 * Fix FIXMEs.
 

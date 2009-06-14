@@ -465,7 +465,7 @@ class Database(object):
             name = "prep%d" % (len(self.__cache),)
             src = self.__cnx.prepare(sql, name)
             self.__cache[sql] = (src, name)
-        return PreparedCursor(src)
+        return PreparedCursor(src, self)
 
     def bulkload(self, table, rows, columns = None):
         return self.__cnx.bulkload(table, columns, rows)
