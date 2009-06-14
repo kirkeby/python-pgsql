@@ -231,6 +231,8 @@ class Cursor(object):
         return list(self.__manyiter(size, self._source.fetchone))
 
     def _typecast(self, row):
+        if row is None:
+            return
         types = zip(*self.description)[1]
         casts = self.typecasts
         return tuple(typecast(t, casts, v) for t, v in zip(types, row))

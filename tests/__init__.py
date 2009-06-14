@@ -1,5 +1,5 @@
 __all__ = ['test_timestamp', 'test_unicode', 'test_bytea', 'test_types',
-           'test_numeric', 'test_encoding']
+           'test_numeric', 'test_encoding', 'test_cursors']
 
 import pgsql
 
