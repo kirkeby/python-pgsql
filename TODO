@@ -1,3 +1,11 @@
+* Aim for 100% test-coverage (currently at 79%), statements missing
+  testing:
+    42-43, 72, 101-105, 109, 112, 129-134, 204, 206, 212, 228-230, 257,
+    260, 264, 266-270, 279-281, 285, 301, 305, 309-316, 329, 370,
+    393-396, 411-423, 429, 432, 442, 470-478, 482, 505-508, 543, 545,
+    547, 551-553
+  (Sure, there will be holes, this is just for bragging rights :).
+
 * Update documentation:
   - Describe connection.typecasts configuration.
   - Add docstrings.
