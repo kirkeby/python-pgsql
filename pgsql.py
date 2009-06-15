@@ -23,6 +23,7 @@ http://www.python.org/peps/pep-0249.html
 See the README file for an overview of this module's contents.
 """
 
+import warnings
 from math import floor, modf
 from time import localtime, strptime
 from decimal import Decimal
@@ -47,9 +48,8 @@ apilevel = '2.0'
 # module may be shared, but not connections
 threadsafety = 1
 
-# this module use extended python format codes
-# FIXME - This is a big fat lie. We support $1 not :1-style parameters.
-paramstyle = 'numeric'
+# this module use ANSI C-style printf format codes
+paramstyle = 'format'
 
 # convert to Python types the values that were not automatically
 # converted by pgsql.c
@@ -173,6 +173,21 @@ def typecast(typ, casts, value):
         return casts[typ](value)
     return value
 
+### encode 'format'-encoded placeholders as PostgreSQL $n placeholders
+def encode_sql(sql):
+    # FIXME - Should be possible to disable this warning.
+    if '$1' in sql:
+        warnings.warn('PostgreSQL-style bind-parameters deprecated')
+
+    # FIXME - This is a bit too simpleminded, it will break on SQL
+    # statements with %s in literal strings.
+    pieces = []
+    for i, piece in enumerate(sql.split('%s')):
+        if i:
+            pieces.append('$%d' % i)
+        pieces.append(piece)
+    return ''.join(pieces)
+
 ### cursor object
 class Cursor(object):
     def __init__(self, src, connection):
@@ -202,6 +217,7 @@ class Cursor(object):
     # if parameters are passed in, we'll attempt to bind them
     def execute(self, operation, params=[]):
         self._start(operation)
+        operation = encode_sql(operation)
         params = self.connection.encode_params(params)
         ret = self._source.execute(operation, params)
         if isinstance(ret, int):
@@ -333,8 +349,9 @@ class IterCursor(Cursor):
         # start transaction, which is required for 'without hold' on the
         # cursor.
         self._start(operation='insert')
-        query = "DECLARE %s NO SCROLL CURSOR WITHOUT HOLD FOR\n%s" %(
-            self.name, query)
+        query = encode_sql(query)
+        query = "DECLARE %s NO SCROLL CURSOR WITHOUT HOLD FOR\n%s" \
+                % (self.name, query)
         params = self.connection.encode_params(params)
         ret = self._source.execute(query, params)
         self.active = 1
@@ -444,6 +461,7 @@ class Database(object):
     def execute(self, query, params=[]):
         # the database's .execute() method does not start transactions
         # automatically
+        query = encode_sql(query)
         params = self.encode_params(params)
         ret = self.__cnx.execute(query, params)
         if isinstance(ret, int):
@@ -459,8 +477,8 @@ class Database(object):
         return IterCursor(src, self)
 
     def prepare(self, sql):
-        sql = sql.strip()
-        (src, name) = self.__cache.get(sql, (None, None))
+        sql = encode_sql(sql).strip()
+        src, name = self.__cache.get(sql, (None, None))
         if src is None:
             name = "prep%d" % (len(self.__cache),)
             src = self.__cnx.prepare(sql, name)
@@ -469,7 +487,7 @@ class Database(object):
 
     def bulkload(self, table, rows, columns = None):
         return self.__cnx.bulkload(table, columns, rows)
-    
+
     def __getattr__(self, name):
         if name in set([
             "dbname", "host", "port", "opt", "tty", "notices", "status",

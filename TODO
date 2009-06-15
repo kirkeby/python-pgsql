@@ -7,15 +7,12 @@
 
 * Fix FIXMEs.
 
-* Remove support for non-standard param-passing styles.
+* Optionally disable check for /\$[0-9]/-style params.
 
 * Remove the dict extensions methods, and other spurious extensions to the
   DB API; methods like this should instead go in an external DB-API compatible
   helper library (which could also translate between the different bind
   parameter styles.)
-
-* Fix broken bind-parameter supprt, by translating '... %s .. %s' into
-  '... $1 .. $2' behind the scenes.
 
 * Update documentation:
   - Fix description of bind-parameters.

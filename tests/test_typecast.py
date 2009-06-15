@@ -1,9 +1,7 @@
 from pgsql import typecast_date, typecast_time, typecast_datetime, \
                   typecast_interval, typecast_numeric, interval
 from datetime import date, time, datetime
-
-def assert_eq(actual, expected):
-    assert actual == expected, '%r is not %r' % (actual, expected)
+from prelude import assert_eq
 
 def test_date():
     assert typecast_date('1979-07-07') == date(1979, 07, 07)

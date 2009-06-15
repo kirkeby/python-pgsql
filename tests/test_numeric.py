@@ -28,7 +28,7 @@ def test_decimal():
     assert isinstance(roundtrip_value(cu, 'y', Decimal('1.5')), Decimal)
 
 def test_float_into_decimal():
-    cu.execute('INSERT INTO y VALUES($1)', [1.5])
+    cu.execute('INSERT INTO y VALUES(%s)', [1.5])
     value, = cu.execute('SELECT a FROM y').fetchone()
     assert isinstance(value, Decimal)
     assert value == Decimal('1.5')
