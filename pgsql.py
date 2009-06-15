@@ -253,24 +253,10 @@ class Cursor(object):
         casts = self.typecasts
         return tuple(typecast(t, casts, v) for t, v in zip(types, row))
 
-    # extensions
-    # FIXME - remove these.
-    def fetchone_dict(self):
-        return self._source.fetchonedict()
-    def fetchall_dict(self):
-        return self._source.fetchalldict()
-    def fetchmany_dict(self, size = None):
-        if size == None:
-            size = self.arraysize
-        return list(self.__manyiter(size, self._source.fetchonedict))
-
-    def nextset(self):
-        raise NotSupportedError, "nextset() is not supported"
-
     def setinputsizes(self, sizes):
         pass
 
-    def setoutputsize(self, size, col = 0):
+    def setoutputsize(self, size, col=0):
         pass
 
     # iterator support
@@ -288,8 +274,7 @@ class Cursor(object):
                         "arraysize", "resulttype", "rownumber",
                         "oidstatus", "valid"]):
             return getattr(self._source, name)
-        elif name in set(["escape_string", "escape_bytea", "unescape_bytea",
-                          "transaction"]):
+        elif name in set(["transaction"]):
             return getattr(self._source.connection, name)
         elif self.__dict__.has_key(name):
             return self.__dict__[name]
@@ -364,9 +349,6 @@ class IterCursor(Cursor):
     def fetchone(self):
         self.__fetchone()
         return Cursor.fetchone(self)
-    def fetchone_dict(self):
-        self.__fetchone()
-        return Cursor.fetchone_dict(self)
 
     def __fetchall(self):
         if self.active:
@@ -374,9 +356,6 @@ class IterCursor(Cursor):
     def fetchall(self):
         self.__fetchall()
         return Cursor.fetchall(self)
-    def fetchall_dict(self):
-        self.__fetchall()
-        return Cursor.fetchall_dict(self)
 
     def __fetchmany(self, size):
         if size is None:
@@ -389,12 +368,6 @@ class IterCursor(Cursor):
         if self.active:
             return Cursor.fetchall(self)
         return Cursor.fetchmany(self, size)
-    def fetchmany_dict(self, size = None):
-        self.__fetchmany(size)
-        # if we're a server side cursor, retrieve all the results from the fetch()
-        if self.active:
-            return Cursor.fetchall_dict(self)
-        return Cursor.fetchmany_dict(self, size)
 
     def close(self):
         if self.active and self._source.valid:
@@ -485,14 +458,12 @@ class Database(object):
             self.__cache[sql] = (src, name)
         return PreparedCursor(src, self)
 
-    def bulkload(self, table, rows, columns = None):
-        return self.__cnx.bulkload(table, columns, rows)
-
     def __getattr__(self, name):
         if name in set([
             "dbname", "host", "port", "opt", "tty", "notices", "status",
-            "escape_string", "escape_bytea", "unescape_bytea", "transaction",
-            "locreate", "loimport", "getlo", "setnotices"]):
+            "transaction",
+            "locreate", "loimport", "getlo",
+            "setnotices"]):
             return getattr(self.__cnx, name)
         elif self.__dict__.has_key(name):
             return self.__dict__[name]

@@ -1937,106 +1937,6 @@ pg_execute(pgobject *self, PyObject *args)
     return ret;
 }
 
-/* escape string */
-static char pg_escape_string__doc__[] =
-"escape_string(str) -- escape a string for use within SQL.";
-static PyObject *
-pg_escape_string(pgobject *self, PyObject *args) {
-    char        *from;                /* our string argument */
-    int                from_length;        /* length of string */
-    char        *to = NULL;        /* the result */
-    size_t        to_length = 0;        /* length of result */
-    PyObject        *ret;                /* string object to return */
-    int                err_code;
-
-    /* need a valid connection to perform this escaping */
-    if (!check_pg_obj(self))
-        return NULL;
-
-    if (!PyArg_ParseTuple(args, "s#:escape_string", &from, &from_length)) {
-        PyErr_SetString(ProgrammingError, "escape_string(s), where s is a string");
-        return NULL;
-    }
-    /* grab a new buffer for the escaped string */
-    to = malloc(2*from_length + 1);
-    if (to == NULL) {
-        PyErr_SetString(InternalError, "cann not allocate required memory");
-        return NULL;
-    }
-    /* escape the string */
-    to_length = PQescapeStringConn(self->cnx, to, from, from_length, &err_code);
-    if (err_code) {
-        /* could not escape the string */
-        PyErr_SetString(ProgrammingError, PQerrorMessage(self->cnx));
-        free(to);
-        return NULL;
-    }
-    ret = Py_BuildValue("s#", to, to_length);
-    free(to);
-    return ret;
-}
-
-/* escape bytea */
-static char pg_escape_bytea__doc__[] =
-"escape_bytea(data) -- escape binary data for use within SQL as type bytea.";
-static PyObject *
-pg_escape_bytea(pgobject *self, PyObject *args) {
-    unsigned char        *from;                /* our string argument */
-    int                        from_length;        /* length of string */
-    unsigned char        *to = NULL;        /* the result */
-    size_t                to_length = 0;        /* length of result */
-    PyObject                *ret;                /* string object to return */
-
-    /* need a valid connection to perform this escaping */
-    if (!check_pg_obj(self))
-        return NULL;
-
-    if (!PyArg_ParseTuple(args, "s#:escape_bytea", &from, &from_length)) {
-        PyErr_SetString(ProgrammingError, "escape_bytea(s), where s is a string");
-        return NULL;
-    }
-    to = PQescapeByteaConn(self->cnx, from, from_length, &to_length);
-    if (!to) {
-        /* could not escape the string */
-        PyErr_SetString(ProgrammingError, PQerrorMessage(self->cnx));
-        return NULL;
-    }
-    ret = Py_BuildValue("s#", to, to_length);
-    PQfreemem(to);
-    return ret;
-}
-
-/* unescape bytea */
-static char pg_unescape_bytea__doc__[] =
-"unescape_bytea(str) -- unescape bytea data that has been retrieved as text.";
-static PyObject *
-pg_unescape_bytea(pgobject *self, PyObject *args)
-{
-    unsigned char        *from;                /* our string argument */
-    int                        from_length;        /* source length */
-    unsigned char        *to = NULL;        /* the result */
-    size_t                to_length = 0;        /* length of result string */
-    PyObject                *ret;        /* string object to return */
-
-    /* need a valid connection to perform this escaping */
-    if (!check_pg_obj(self))
-        return NULL;
-
-    if (!PyArg_ParseTuple(args, "s#:unescape_bytea", &from, &from_length)) {
-        PyErr_SetString(ProgrammingError, "unescape_bytea(s), where s is a string");
-        return NULL;
-    }
-    to = PQunescapeBytea(from, &to_length);
-    if (!to) {
-        /* could not escape the string */
-        PyErr_SetString(ProgrammingError, PQerrorMessage(self->cnx));
-        return NULL;
-    }
-    ret = Py_BuildValue("s#", to, to_length);
-    PQfreemem(to);
-    return ret;
-}
-
 static char pg_setnotices__doc__[] =
 "setnotices(bool) - enables/disable receiving and storing of the server notices.\n"
 "If enabled, the .notices attribute will be populated with server notice strings "
@@ -2077,10 +1977,6 @@ pg_setnotices(pgobject *self, PyObject *args)
 #include "pglarge.c"
 #endif /* LARGE_OBJECTS */
 
-#ifdef DIRECT_ACCESS
-#include "pgcopy.c"
-#endif
-
 /* connection object methods */
 static struct PyMethodDef pgobj_methods[] = {
         {"source", (PyCFunction) pg_source, METH_VARARGS, pg_source__doc__},
@@ -2089,21 +1985,12 @@ static struct PyMethodDef pgobj_methods[] = {
         {"reset", (PyCFunction) pg_reset, METH_VARARGS, pg_reset__doc__},
         {"cancel", (PyCFunction) pg_cancel, METH_VARARGS, pg_cancel__doc__},
         {"close", (PyCFunction) pg_close, METH_VARARGS, pg_close__doc__},
-        {"escape_string", (PyCFunction) pg_escape_string, METH_VARARGS,
-                        pg_escape_string__doc__},
-        {"escape_bytea", (PyCFunction) pg_escape_bytea, METH_VARARGS,
-                        pg_escape_bytea__doc__},
-        {"unescape_bytea", (PyCFunction) pg_unescape_bytea, METH_VARARGS,
-                        pg_unescape_bytea__doc__},
 
 #ifdef LARGE_OBJECTS
         {"locreate", (PyCFunction) pg_locreate, 1, pg_locreate__doc__},
         {"getlo",    (PyCFunction) pg_getlo, 1, pg_getlo__doc__},
         {"loimport", (PyCFunction) pg_loimport, 1, pg_loimport__doc__},
 #endif   /* LARGE_OBJECTS */
-#ifdef DIRECT_ACCESS
-        {"bulkload",  (PyCFunction) pg_inserttable, METH_VARARGS, pg_inserttable__doc__},
-#endif
         {"setnotices", (PyCFunction) pg_setnotices, METH_VARARGS, pg_setnotices__doc__},
 
         {NULL, NULL}                                /* sentinel */
