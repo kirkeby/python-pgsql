@@ -48,7 +48,17 @@
 
 #include <Python.h>
 
-#include "pgsql.h"
+/* compatibility for Python earlier than 2.5 */
+#if PY_VERSION_HEX < 0x02050000 && !defined(PY_SSIZE_T_MIN)
+typedef int Py_ssize_t;
+#define PY_SSIZE_T_MAX INT_MAX
+#define PY_SSIZE_T_MIN INT_MIN
+#endif /* PY_VERSION_HEX */
+
+/* PyObject_Del does not exist in older versions of Python: */
+#if PY_VERSION_HEX < 0x01060000
+#define PyObject_Del(op) PyMem_DEL((op))
+#endif
 
 static PyObject *Error, *Warning, *InterfaceError,
         *DatabaseError, *InternalError, *OperationalError, *ProgrammingError,

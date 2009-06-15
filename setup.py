@@ -35,7 +35,7 @@ setup(
     license = "Python",
     py_modules = ['pgsql'],
     ext_modules = [
-        Extension('_pgsql', ['pgsql.c'],
+        Extension('_pgsql', ['_pgsql.c'],
             include_dirs = include_dirs,
             library_dirs = library_dirs,
             libraries = libraries,
