@@ -77,14 +77,6 @@ static char pg__doc__[] = "Simple Python interface to PostgreSQL DB";
 
 #define MAX_BUFFER_SIZE 8192        /* maximum transaction size */
 
-#ifndef NO_DIRECT
-#define DIRECT_ACCESS        1                /* enables direct access functions */
-#endif   /* NO_DIRECT */
-
-#ifndef NO_LARGE
-#define LARGE_OBJECTS        1                /* enables large objects support */
-#endif   /* NO_LARGE */
-
 /* --------------------------------------------------------------------- */
 
 /* MODULE GLOBAL VARIABLES */
@@ -1973,10 +1965,6 @@ pg_setnotices(pgobject *self, PyObject *args)
     return Py_True;
 }
 
-#ifdef LARGE_OBJECTS
-#include "pglarge.c"
-#endif /* LARGE_OBJECTS */
-
 /* connection object methods */
 static struct PyMethodDef pgobj_methods[] = {
         {"source", (PyCFunction) pg_source, METH_VARARGS, pg_source__doc__},
@@ -1986,11 +1974,6 @@ static struct PyMethodDef pgobj_methods[] = {
         {"cancel", (PyCFunction) pg_cancel, METH_VARARGS, pg_cancel__doc__},
         {"close", (PyCFunction) pg_close, METH_VARARGS, pg_close__doc__},
 
-#ifdef LARGE_OBJECTS
-        {"locreate", (PyCFunction) pg_locreate, 1, pg_locreate__doc__},
-        {"getlo",    (PyCFunction) pg_getlo, 1, pg_getlo__doc__},
-        {"loimport", (PyCFunction) pg_loimport, 1, pg_loimport__doc__},
-#endif   /* LARGE_OBJECTS */
         {"setnotices", (PyCFunction) pg_setnotices, METH_VARARGS, pg_setnotices__doc__},
 
         {NULL, NULL}                                /* sentinel */
@@ -2130,9 +2113,6 @@ init_pgsql(void)
 
         /* Initialize here because some WIN platforms get confused otherwise */
         PgType.ob_type = PgSourceType.ob_type = &PyType_Type;
-#ifdef LARGE_OBJECTS
-        PglargeType.ob_type = &PyType_Type;
-#endif /* LARGE_OBJECTS */
 
         /* Create the module and add the functions */
         mod = Py_InitModule4("_pgsql", pg_methods, pg__doc__, NULL, PYTHON_API_VERSION);
@@ -2190,16 +2170,6 @@ init_pgsql(void)
         PyDict_SetItemString(dict,"TRANS_INTRANS",PyInt_FromLong(PQTRANS_INTRANS));
         PyDict_SetItemString(dict,"TRANS_INERROR",PyInt_FromLong(PQTRANS_INERROR));
         PyDict_SetItemString(dict,"TRANS_UNKNOWN",PyInt_FromLong(PQTRANS_UNKNOWN));
-
-#ifdef LARGE_OBJECTS
-        /* create mode for large objects */
-        PyDict_SetItemString(dict, "INV_READ", PyInt_FromLong(INV_READ));
-        PyDict_SetItemString(dict, "INV_WRITE", PyInt_FromLong(INV_WRITE));
-        /* position flags for lo_lseek */
-        PyDict_SetItemString(dict, "SEEK_SET", PyInt_FromLong(SEEK_SET));
-        PyDict_SetItemString(dict, "SEEK_CUR", PyInt_FromLong(SEEK_CUR));
-        PyDict_SetItemString(dict, "SEEK_END", PyInt_FromLong(SEEK_END));
-#endif   /* LARGE_OBJECTS */
 
         /* Check for errors */
         if (PyErr_Occurred())
