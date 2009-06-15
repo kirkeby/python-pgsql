@@ -1,9 +1,12 @@
 Changed since 0.9.7:
+ o Fix handling of numeric types on >32-bit platforms.
+ o Return non-lossy numeric types as decimal.Decimal.
+ o Remove various superflous pgsql-specific DB API extensions.
+ o Implement PEP 249 format-style bind-parameters.
  o Add tests.
- o Update handling of binary vs text strings; str is always sent as
-   type BYTEA and unicode as type TEXT, and BYTEA strings are returned as
-   str-instances, while all the character string types are returned as
-   unicode-instances.
+ o Fix pgsql.Binary.
+ o Update handling of binary vs text strings; character string types are
+   now always returned as unicode-instances.
  o Implement handling of date and time types.
  o Fix cursor.rowcount attribute for non-DQL statements.
 

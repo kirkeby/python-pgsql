@@ -3,6 +3,9 @@ COPYRIGHT NOTICES:
 
 pgsql - Simple Python bindings for PostgreSQL 8.0+
 
+Reworked to support data-type conversions more sanely by Sune Kirkeby
+<ski@csis.dk>, Copyright (c) 2009 CSIS A/S.
+
 Written by Cristian Gafton, <gafton@rpath.com> (c) 2006
 Copyright (c) 2006, rPath, Inc.
 

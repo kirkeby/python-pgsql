@@ -446,10 +446,18 @@ class Database(object):
         return Cursor(src, self)
 
     def itercursor(self):
+        '''Create a iterator (server-side) cursor.
+
+        Iterator cursors work exactly like normal cursors.'''
         src = self.__cnx.source()
         return IterCursor(src, self)
 
     def prepare(self, sql):
+        '''Create a prepared statement.
+
+        The preapred statement can be used like a normal cursor, with
+        the exception that the execute method only accepts values for
+        bind parameters.'''
         sql = encode_sql(sql).strip()
         src, name = self.__cache.get(sql, (None, None))
         if src is None:

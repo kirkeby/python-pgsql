@@ -1,12 +1,12 @@
 * Update documentation:
-  - Fix description of bind-parameters.
-  - Describe str/unicode handling.
-  - Remove refernces to dead extensions methods.
   - Describe connection.typecasts configuration.
-  - Reference:
-    http://archives.postgresql.org/pgsql-announce/2006-09/msg00002.php
+  - Add docstrings.
 
 * Go through entire module and check for PEP 249 violations.
+
+* Replace .notices with .messages and fix PEP compliance.
+
+* Optionally use the warnings-framework to warn about notices.
 
 * Fix the implementation of cursor/itercursor/prepare:
   * connection.prepare should return a special object, which .execute
