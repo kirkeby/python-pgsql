@@ -3,23 +3,28 @@ __all__ = ['test_timestamp', 'test_unicode', 'test_bytea', 'test_types',
 
 import pgsql
 
-class setup_function:
+class fixtures:
     def __init__(self, module):
         self.module = module
         self.dbapi = pgsql
 
-    def __call__(self):
+    def setup(self):
         self.module.dbapi = self.dbapi
         cnx = self.module.cnx = self.dbapi.connect()
         for sql in getattr(self.module, 'create_statements', []):
             cnx.execute(sql)
         self.module.cu = cnx.cursor()
 
+    def teardown(self):
+        self.module.cu.close()
+        self.module.cnx.close()
+
 for module_name in __all__:
     module = getattr(__import__('tests', fromlist=[module_name]), module_name)
-    setup = setup_function(module)
+    fix = fixtures(module)
     for name, value in module.__dict__.items():
         if name.startswith('test_') and callable(value):
-            value.setup = setup
+            value.setup = fix.setup
+            value.teardown = fix.teardown
 
-del pgsql, setup_function, setup, module_name, module, name, value
+del pgsql, fix, module_name, module, name, value

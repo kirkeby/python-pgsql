@@ -225,6 +225,9 @@ class Cursor(object):
 
     def executemany(self, operation, param_seq):
         self._start(operation)
+        operation = encode_sql(operation)
+        params_seq = (self.connection.encode_params(params)
+                      for params in param_seq)
         ret = self._source.executemany(operation, param_seq)
         return self
 
