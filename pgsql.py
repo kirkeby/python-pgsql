@@ -529,9 +529,3 @@ def TimeFromTicks(ticks):
     return apply(Time, localtime(ticks)[3:6])
 def TimestampFromTicks(ticks):
     return apply(Timestamp, localtime(ticks)[:6])
-
-# if run as script, print some information
-if __name__ == '__main__':
-    print 'pgsql version', version
-    print
-    print __doc__
