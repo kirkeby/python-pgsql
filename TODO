@@ -1,6 +1,7 @@
 * Update documentation:
   - Describe connection.typecasts configuration.
   - Add docstrings.
+  - Why this project? Why not PyGreSQL, python-pgsql or psycopg2?
 
 * Go through entire module and check for PEP 249 violations.
 
