@@ -829,6 +829,7 @@ pgsource_executemany(pgsourceobject * self, PyObject * args)
 {
     char        *query = NULL;
     int                query_len = 0;
+    PyObject        *result = NULL;
     PyObject        *paramsList = NULL;
     PGresult        *prep = NULL;
     int                ret;
@@ -932,7 +933,9 @@ pgsource_executemany(pgsourceobject * self, PyObject * args)
     Py_DECREF(iterator);
     if (prep)
         PQclear(prep);
-    return _pgsource_postexec(self);
+    result = _pgsource_postexec(self);
+    self->max_row = -1;
+    return result;
 }
 
 /* FETCHING DATA from a PGresult */
@@ -1165,13 +1168,7 @@ pgsource_fetchall(pgsourceobject * self, PyObject * args)
     if (!check_no_args(args, "fetchall"))
         return NULL;
 
-    /* need to return an empty list ? */
-    if (self->current_row > self->max_row) {
-        /* already returned the empty list, another fetchall call is invalid... */
-        Py_INCREF(Py_None);
-        return Py_None;
-    } else if (self->current_row == self->max_row) {
-        self->current_row++;
+    if (self->current_row >= self->max_row) {
         return PyList_New(0);
     }
 

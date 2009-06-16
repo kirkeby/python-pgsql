@@ -194,10 +194,25 @@ class Cursor(object):
         self.connection = connection
         self.typecasts = connection.typecasts
 
+    def _not_closed(self):
+        self.connection._not_closed()
+        if self._source is None:
+            raise Error('Cursor already closed')
+
+    def _cleanup(self):
+        pass
+
     def close(self):
-        self._source.close()
+        if self._source:
+            self._source.close()
+            self._source = None
+
+    def __del__(self):
+        if self._source:
+            self.close()
 
     def _start(self, operation = None):
+        self._not_closed()
         transaction = self._source.connection.transaction
         if transaction == TRANS_UNKNOWN:
             raise DatabaseError("Invalid/Unknown database connection")
@@ -292,6 +307,7 @@ class PreparedCursor(Cursor):
     # we require parameters since we've already bound a query
     def execute(self, params=[]):
         #self._start()
+        self._not_closed()
         if self._source.connection.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
         params = self.connection.encode_params(params)
@@ -301,6 +317,7 @@ class PreparedCursor(Cursor):
         return self
     def executemany(self, param_seq):
         #self._start()
+        self._not_closed()
         if self._source.connection.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
         param_seq = (
@@ -318,21 +335,29 @@ class IterCursor(Cursor):
         # we need a fairly random name for our cursor executions
         self.name = "c%ss%s" % (hex(abs(id(self))), hex(abs(id(source))))
 
+    def _cleanup(self):
+        if self.active and self._source.valid:
+            self._source.execute("CLOSE %s" % self.name)
+            self.active = 0
+
     def execute(self, query, params=[]):
         query = query.strip()
         if not query.lower().startswith("select"):
             return Cursor.execute(self, query, params)
+
         # we have a select query
-        self.close()
         # open up this cursor for select
         # FIXME - This is butt fucking ugly. We lie to _start to force a
         # start transaction, which is required for 'without hold' on the
         # cursor.
+        self._cleanup()
         self._start(operation='insert')
+
         query = encode_sql(query)
         query = "DECLARE %s NO SCROLL CURSOR WITHOUT HOLD FOR\n%s" \
                 % (self.name, query)
         params = self.connection.encode_params(params)
+
         ret = self._source.execute(query, params)
         self.active = 1
         return ret
@@ -364,16 +389,6 @@ class IterCursor(Cursor):
             return Cursor.fetchall(self)
         return Cursor.fetchmany(self, size)
 
-    def close(self):
-        if self.active and self._source.valid:
-            self._source.execute("CLOSE %s" % self.name)
-            self.active = 0
-    # be nice to the server side and let it free resources...
-    def __del__(self):
-        self.close()
-        self._source.close()
-        del self
-
 ### connection object
 class Database(object):
     def __init__(self, cnx):
@@ -383,6 +398,10 @@ class Database(object):
         self.encoding = 'utf-8'
         # for prepared statement cache
         self.__cache = {}
+
+    def _not_closed(self):
+        if self.__cnx is None:
+            raise Error('Connection already closed')
 
     def __del__(self):
         if self.__cnx is not None:
@@ -403,6 +422,7 @@ class Database(object):
 
     def close(self):
         # deallocate statements
+        self._not_closed()
         if self.__cnx.transaction in [TRANS_INERROR, TRANS_INTRANS]:
             self.__cnx.execute("ROLLBACK")
         for src, name in self.__cache.itervalues():
@@ -421,14 +441,17 @@ class Database(object):
     # block, so to simulate autocommit=off, we have to start new
     # transactions as soon as we flush them
     def commit(self):
+        self._not_closed()
         self.__cnx.execute("COMMIT")
 
     def rollback(self):
+        self._not_closed()
         self.__cnx.execute("ROLLBACK")
 
     def execute(self, query, params=[]):
         # the database's .execute() method does not start transactions
         # automatically
+        self._not_closed()
         query = encode_sql(query)
         params = self.encode_params(params)
         ret = self.__cnx.execute(query, params)
@@ -437,6 +460,7 @@ class Database(object):
         return Cursor(ret, self)
 
     def cursor(self):
+        self._not_closed()
         src = self.__cnx.source()
         return Cursor(src, self)
 
@@ -444,6 +468,7 @@ class Database(object):
         '''Create a iterator (server-side) cursor.
 
         Iterator cursors work exactly like normal cursors.'''
+        self._not_closed()
         src = self.__cnx.source()
         return IterCursor(src, self)
 
@@ -453,6 +478,7 @@ class Database(object):
         The preapred statement can be used like a normal cursor, with
         the exception that the execute method only accepts values for
         bind parameters.'''
+        self._not_closed()
         sql = encode_sql(sql).strip()
         src, name = self.__cache.get(sql, (None, None))
         if src is None:
