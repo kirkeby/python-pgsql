@@ -1,9 +1,8 @@
 # vim:set tw=72:
 
-* Aim for 100% test-coverage og Python code (currently at 92%),
+* Aim for 100% test-coverage og Python code (currently at 95%),
   statements missing testing:
-    98-102, 106, 109, 127, 129-131, 226, 257, 261, 264, 267, 299, 305,
-    405, 408, 410-413, 419, 422, 432, 487
+    228, 266-269, 301, 308, 405, 408, 410-415, 486-487, 533
 
 * Figure out how to measure test-coverage for the C extension.
 

@@ -108,6 +108,8 @@ class interval(object):
             if getattr(self, attr) <> getattr(other, attr):
                 return False
         return True
+    def __ne__(self, other):
+        return not self == other
 
     def __str__(self):
         pieces = []

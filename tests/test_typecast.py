@@ -1,6 +1,6 @@
 from pgsql import typecast_date, typecast_time, typecast_datetime, \
                   typecast_interval, typecast_numeric, interval
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timedelta
 from prelude import assert_eq
 
 def test_date():
