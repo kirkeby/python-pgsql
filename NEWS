@@ -1,4 +1,5 @@
 Changed since 0.9.7:
+ o Improve .rowcount and .description DB API-compliance.
  o Large object support removed.
  o Fix handling of numeric types on >32-bit platforms.
  o Return non-lossy numeric types as decimal.Decimal.
