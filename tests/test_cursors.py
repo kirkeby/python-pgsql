@@ -3,6 +3,8 @@ def try_cursor(cursor, sql):
     assert cursor.fetchone() == (42,)
     assert cursor.fetchone() == None
     cursor.execute(sql)
+    # FIXME - test that fetchmany obeys arraysize
+    # FIXME - test that fetchmany obeys size-argument
     assert cursor.fetchmany() == [(42,)]
     assert cursor.fetchmany() == []
     cursor.execute(sql)
@@ -17,3 +19,6 @@ def test_itercursor():
 
 def test_prepared():
     try_cursor(cnx.prepare('SELECT 42'), [])
+
+# FIXME - test that fetch* raise an Error when execute* returned no
+# ersult set, and before execute was called.

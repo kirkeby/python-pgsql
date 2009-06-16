@@ -10,6 +10,8 @@
 
 """pgsql - DB-API 2.0 compliant module for PostgreSQL.
 
+<c> 2009 Sune Kirkeby <mig@ibofobi.dk>, CSIS A/S.
+
 (c) 2006-2007 Cristian Gafton <gafton@rpath.com>, rPath, Inc.
 Reworked the C and Python modules based on PyGreSQL sources
 
@@ -33,14 +35,9 @@ from _pgsql import TRANS_ACTIVE, TRANS_IDLE, \
                    TRANS_INERROR, TRANS_INTRANS, TRANS_UNKNOWN
 from _pgsql import InterfaceError, DatabaseError, InternalError, \
      OperationalError, ProgrammingError, IntegrityError, DataError, \
-     NotSupportedError
+     NotSupportedError, Error, Warning
 
 from datetime import datetime, date, time, timedelta
-
-try: # Python-2.3 doesn't have sets in global namespace
-    set = set
-except NameError:
-    from sets import Set as set
 
 # compliant with DB SIG 2.0
 apilevel = '2.0'
@@ -199,7 +196,7 @@ class Cursor(object):
         self._source.close()
 
     def _start(self, operation = None):
-        transaction = self.transaction
+        transaction = self._source.connection.transaction
         if transaction == TRANS_UNKNOWN:
             raise DatabaseError("Invalid/Unknown database connection")
         if transaction == TRANS_INERROR:
@@ -268,36 +265,29 @@ class Cursor(object):
             raise StopIteration
         else:
             return item
-    # access to other attributes
-    def __getattr__(self, name):
-        if name in set(["fields", "description", "rowcount", "notices",
-                        "arraysize", "resulttype", "rownumber",
-                        "oidstatus", "valid"]):
-            return getattr(self._source, name)
-        elif name in set(["transaction"]):
-            return getattr(self._source.connection, name)
-        elif self.__dict__.has_key(name):
-            return self.__dict__[name]
-        raise AttributeError, name
 
-    def __setattr__(self, name, val):
-        if name == "arraysize":
-            setattr(self._source, name, val)
-        else:
-            object.__setattr__(self, name, val)
+    # Attributes
+    def __getattr__(self, name):
+        return getattr(self._source, name)
+
+    def get_arraysize(self):
+        return self._soure.arraysize
+    def set_arraysize(self, value):
+        self._source.arraysize = value
+    arraysize = property(get_arraysize, set_arraysize)
 
 # A cursor class for prepared statements
 class PreparedCursor(Cursor):
     def __init__(self, *args):
         Cursor.__init__(self, *args)
         # make sure we're always in a transaction when we're preparing statements
-        if self.transaction == TRANS_IDLE:
+        if self._source.connection.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
 
     # we require parameters since we've already bound a query
     def execute(self, params=[]):
         #self._start()
-        if self.transaction == TRANS_IDLE:
+        if self._source.connection.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
         params = self.connection.encode_params(params)
         ret = self._source.execute(params)
@@ -306,7 +296,7 @@ class PreparedCursor(Cursor):
         return self
     def executemany(self, param_seq):
         #self._start()
-        if self.transaction == TRANS_IDLE:
+        if self._source.connection.transaction == TRANS_IDLE:
             self._source.connection.execute("START TRANSACTION")
         param_seq = (
             self.connection.encode_params(params)
@@ -465,17 +455,6 @@ class Database(object):
             src = self.__cnx.prepare(sql, name)
             self.__cache[sql] = (src, name)
         return PreparedCursor(src, self)
-
-    def __getattr__(self, name):
-        if name in set([
-            "dbname", "host", "port", "opt", "tty", "notices", "status",
-            "transaction",
-            "locreate", "loimport", "getlo",
-            "setnotices"]):
-            return getattr(self.__cnx, name)
-        elif self.__dict__.has_key(name):
-            return self.__dict__[name]
-        raise AttributeError, name
 
     # FIXME - Should this just be a connect parameter instead?
     def get_encoding(self):

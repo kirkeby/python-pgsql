@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from nose.plugins.skip import SkipTest
 
 def assert_eq(actual, expected):
     assert actual == expected, '%r is not %r' % (actual, expected)

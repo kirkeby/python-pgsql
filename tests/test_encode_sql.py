@@ -1,7 +1,7 @@
 from __future__ import with_statement
 
 from pgsql import encode_sql
-from prelude import assert_eq, hook
+from prelude import assert_eq, hook, SkipTest
 
 def test_encode_sql():
     assert_eq(encode_sql('SELECT blah FROM foo'),
@@ -27,7 +27,6 @@ def test_psql_style_params_warning():
         assert_eq(encode_sql('SELECT $1'), 'SELECT $1')
         assert warned.get('PostgreSQL-style bind-parameters deprecated')
 
-from nose.plugins.skip import SkipTest
 def test_encode_literal():
     raise SkipTest
     assert_eq(encode_sql("SELECT '%s'"),

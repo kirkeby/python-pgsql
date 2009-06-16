@@ -180,7 +180,8 @@ pgsource_new(pgobject * pgcnx)
     npgobj->last_result = NULL;
     npgobj->connid = pgcnx->connid;
     npgobj->arraysize = ARRAYSIZE;
-    npgobj->current_row = npgobj->max_row = npgobj->num_fields = 0;
+    npgobj->max_row = -1;
+    npgobj->current_row = npgobj->num_fields = 0;
     npgobj->prepared = 0;
     npgobj->name = NULL;
     npgobj->query = NULL;
@@ -364,7 +365,7 @@ static void _pg_source_clear(pgsourceobject *self)
         PQclear(self->last_result);
     self->result_type = RESULT_EMPTY;
     self->last_result = NULL;
-    self->max_row = 0;
+    self->max_row = -1;
     self->current_row = 0;
     self->num_fields = 0;
 }
@@ -1396,11 +1397,13 @@ static PyObject *_pg_source_description(pgsourceobject *self)
     int        i;
     PyObject   *result;
 
-    /* checks validity */
-    if (!check_source_obj(self, CHECK_RESULT))
-        return NULL;
+    /* if no query has been executed return None */
+    if (self->last_result == NULL) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
 
-    /* if the last query did not return rows, give up */
+    /* if the last query did not return rows return None */
     if (self->result_type != RESULT_DQL) {
         Py_INCREF(Py_None);
         return Py_None;
