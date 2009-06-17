@@ -4,6 +4,8 @@
   The missing pieces is the prepared statements, unfortunately they
   seem to be b0rked.
 
+* Test in multiple Python versions: 2.3 through 3.1.
+
 * Figure out how to measure test-coverage for the C extension.
 
 * Update documentation:
