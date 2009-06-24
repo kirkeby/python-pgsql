@@ -27,7 +27,7 @@ if sys.platform == "win32":
 
 setup(
     name = "python-pgsql",
-    version = "0.9.7-20090617",
+    version = "0.9.7-20090624",
     description = "PostgreSQL bindings for Python w/ bind parameters support",
     author = "Sune Kirkeby",
     author_email = "mig@ibofobi.dk",

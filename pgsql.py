@@ -204,6 +204,7 @@ class Cursor(object):
 
     def close(self):
         if self._source:
+            self._cleanup()
             self._source.close()
             self._source = None
 
@@ -335,6 +336,12 @@ class IterCursor(Cursor):
         # we need a fairly random name for our cursor executions
         self.name = "c%ss%s" % (hex(abs(id(self))), hex(abs(id(source))))
 
+    def _start(self, operation=None):
+        self._cleanup()
+        # We lie about which operation we're about to execute to force a start
+        # transaction, which is required for 'without hold' on the cursor.
+        Cursor._start(self, operation='insert')
+        
     def _cleanup(self):
         if self.active and self._source.valid:
             self._source.execute("CLOSE %s" % self.name)
@@ -345,14 +352,7 @@ class IterCursor(Cursor):
         if not query.lower().startswith("select"):
             return Cursor.execute(self, query, params)
 
-        # we have a select query
-        # open up this cursor for select
-        # FIXME - This is butt fucking ugly. We lie to _start to force a
-        # start transaction, which is required for 'without hold' on the
-        # cursor.
-        self._cleanup()
-        self._start(operation='insert')
-
+        self._start()
         query = encode_sql(query)
         query = "DECLARE %s NO SCROLL CURSOR WITHOUT HOLD FOR\n%s" \
                 % (self.name, query)
