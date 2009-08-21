@@ -26,8 +26,10 @@ if sys.platform == "win32":
     include_dirs.append(os.path.join(pg_include_dir_server, 'port/win32'))
 
 setup(
+    # FIXME - Should probably change the package name, since this is no
+    # longer a simple fork.
     name = "python-pgsql",
-    version = "0.9.7-20090624",
+    version = "0.9.7-20090821",
     description = "PostgreSQL bindings for Python w/ bind parameters support",
     author = "Sune Kirkeby",
     author_email = "mig@ibofobi.dk",
