@@ -1042,15 +1042,29 @@ _pg_fetch_cell(PGresult *result, int row, int col)
                 void *tmpstr = NULL;
                 Py_ssize_t tmplen = 0;
                 int retcode = 0;
-                fprintf(stderr, "WARNING: UNKNOWN DATATYPE %ld processed as string. "
-                        "Check pg_type.h to decode this OID\n", (long)oidtype);
-                if (!(ret = PyBuffer_New(cellsize)) || ret == PyExc_ValueError) {
-                    PyErr_SetString(PyExc_MemoryError, "could not allocate buffer object for row data");
+                char *notice;
+
+                asprintf(&notice,
+                         "Unknown datatype %ld processed as string",
+                         (long)oidtype);
+                if(notice) {
+                    PyErr_Warn(NULL, notice);
+                    free(notice);
+                } else {
+                    PyErr_SetString(PyExc_MemoryError, "out of memory");
+                    return NULL;
+                }
+
+                if (!(ret = PyBuffer_New(cellsize))
+                     || ret == PyExc_ValueError) {
+                    PyErr_SetString(PyExc_MemoryError,
+                                    "could not allocate buffer object");
                     return NULL;
                 }
                 retcode = PyObject_AsWriteBuffer(ret, &tmpstr, &tmplen);
                 if (retcode < 0 || (tmplen != cellsize)) {
-                    PyErr_SetString(InternalError, "could not convert unknown data field to a buffer object");
+                    PyErr_SetString(InternalError,
+                                    "could not convert to buffer ");
                     Py_DECREF(ret);
                     return NULL;
                 }
@@ -1662,8 +1676,16 @@ static void _pg_notice_callback(pgobject *self, char *message)
            us to raise an exception here - nor should we do it,
            ebcause the notice is not really an error message for the
            query being executed. The default processor will do */
-        fprintf(stderr, "WARNING: invalid connection while processing notice:\n%s",
-                message);
+        char *notice;
+        asprintf(&notice,
+                 "invalid connection while processing notice:\n%s",
+                 message);
+        if(notice) {
+            PyErr_Warn(NULL, notice);
+            free(notice);
+        } else {
+            PyErr_Warn(NULL, "out of memory in _pg_notice_callback");
+        }
         return;
     }
     /* we do not want notices recorded */
