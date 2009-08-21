@@ -1,6 +1,15 @@
 #!/bin/sh
+
 set -e
+
 cd `dirname $0`
 ./setup.py build
+
+# This is a hack, but my virtualenv'ed Python insists on loading the
+# already installed _pgsql module, because it comes before $PYTHONPATH
+# in sys.path. Crock!
 export PYTHONPATH=`echo $PWD/build/lib.*`
+trap 'rm -f _pgsql.so' 0
+ln -sf build/lib.*/_pgsql.so .
+
 nosetests "$@"

@@ -158,12 +158,35 @@ def typecast_interval(value):
 def typecast_numeric(value):
     return Decimal(value)
 
+def typecast_bool_ary(value):
+    value = str(value)[1:-1]
+    if not value:
+        return []
+    return [ e == 't' for e in value.split(',') ]
+
+def typecast_int_ary(value):
+    value = str(value)[1:-1]
+    if not value:
+        return []
+    return [ int(e) for e in value.split(',') ]
+
+import csv
+def typecast_str_ary(value):
+    value = str(value)[1:-1]
+    if not value:
+        return []
+    reader = csv.reader([value], doublequote=False, escapechar='\\')
+    return [ unicode(e, 'utf-8') for e in reader.next() ]
+
 default_typecasts = {
     'date': typecast_date,
     'datetime': typecast_datetime,
     'time': typecast_time,
     'interval': typecast_interval,
     'numeric': typecast_numeric,
+    1000: typecast_bool_ary,
+    1007: typecast_int_ary,
+    1009: typecast_str_ary,
 }
 def typecast(typ, casts, value):
     if value is None:
@@ -171,6 +194,14 @@ def typecast(typ, casts, value):
     if typ in casts:
         return casts[typ](value)
     return value
+
+# Silence warnings about array-conversions which we do here.
+for key in default_typecasts.keys():
+    if not isinstance(key, int):
+        continue
+    warnings.filterwarnings('ignore',
+                            'Unknown datatype %d processed as string' % key,
+                            RuntimeWarning)
 
 ### encode 'format'-encoded placeholders as PostgreSQL $n placeholders
 def encode_sql(sql):
