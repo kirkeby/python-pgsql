@@ -1,6 +1,7 @@
-__all__ = ['test_timestamp', 'test_unicode', 'test_bytea', 'test_types',
-           'test_numeric', 'test_encoding', 'test_cursors', 'test_attributes',
-           'test_array']
+import os
+__all__ = [filename.replace('.py', '')
+           for filename in os.listdir(os.path.dirname(__file__))
+           if filename.startswith('test_') and filename.endswith('.py')]
 
 import pgsql
 
@@ -28,4 +29,4 @@ for module_name in __all__:
             value.setup = fix.setup
             value.teardown = fix.teardown
 
-del pgsql, fix, module_name, module, name, value
+del os, pgsql, fix, module_name, module, name, value
