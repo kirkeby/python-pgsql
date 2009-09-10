@@ -257,8 +257,7 @@ class Cursor(object):
         if operation is None:
             return
         op = operation.strip()[:6].lower()
-        if op in ["insert", "update", "delete"]:
-            self._source.execute("START TRANSACTION")
+        assert transaction <> TRANS_IDLE
 
     # if parameters are passed in, we'll attempt to bind them
     def execute(self, operation, params=[]):
@@ -332,16 +331,12 @@ class Cursor(object):
 class PreparedCursor(Cursor):
     def __init__(self, *args):
         Cursor.__init__(self, *args)
-        # make sure we're always in a transaction when we're preparing statements
-        if self._source.connection.transaction == TRANS_IDLE:
-            self._source.connection.execute("START TRANSACTION")
+        assert self._source.connection.transaction <> TRANS_IDLE
 
     # we require parameters since we've already bound a query
     def execute(self, params=[]):
         #self._start()
         self._not_closed()
-        if self._source.connection.transaction == TRANS_IDLE:
-            self._source.connection.execute("START TRANSACTION")
         params = self.connection.encode_params(params)
         ret = self._source.execute(params)
         if isinstance(ret, int):
@@ -350,8 +345,6 @@ class PreparedCursor(Cursor):
     def executemany(self, param_seq):
         #self._start()
         self._not_closed()
-        if self._source.connection.transaction == TRANS_IDLE:
-            self._source.connection.execute("START TRANSACTION")
         param_seq = (
             self.connection.encode_params(params)
             for params in param_seq
@@ -427,6 +420,7 @@ class Database(object):
         self.typecasts = default_typecasts.copy()
         self.typecasts['string'] = self.typecast_string
         self.encoding = 'utf-8'
+        self.__cnx.execute('BEGIN')
         # for prepared statement cache
         self.__cache = {}
 
@@ -474,14 +468,14 @@ class Database(object):
     def commit(self):
         self._not_closed()
         self.__cnx.execute("COMMIT")
+        self.__cnx.execute('BEGIN')
 
     def rollback(self):
         self._not_closed()
         self.__cnx.execute("ROLLBACK")
+        self.__cnx.execute('BEGIN')
 
     def execute(self, query, params=[]):
-        # the database's .execute() method does not start transactions
-        # automatically
         self._not_closed()
         query = encode_sql(query)
         params = self.encode_params(params)
