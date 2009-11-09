@@ -573,6 +573,8 @@ class Binary:
         self.value = str(s)
     def __str__(self):
         return self.value
+    def __repr__(self):
+        return 'Binary(%r)' % self.value
 
 def DateFromTicks(ticks):
     return apply(Date, localtime(ticks)[:3])
