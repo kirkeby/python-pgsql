@@ -29,7 +29,7 @@ setup(
     # FIXME - Should probably change the package name, since this is no
     # longer a simple fork.
     name = "python-pgsql",
-    version = "0.9.7-20091109",
+    version = "0.9.8",
     description = "PostgreSQL bindings for Python w/ bind parameters support",
     author = "Sune Kirkeby",
     author_email = "mig@ibofobi.dk",
