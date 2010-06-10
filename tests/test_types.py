@@ -5,6 +5,7 @@ create_statements = [
     'CREATE TEMPORARY TABLE txt(a text)',
     'CREATE TEMPORARY TABLE i(a integer)',
     'CREATE TEMPORARY TABLE n(a numeric)',
+    'CREATE TEMPORARY TABLE net(a inet)',
 ]
 
 def test_binary():
@@ -36,6 +37,13 @@ def test_number():
 
     cu.execute('SELECT a FROM n')
     assert cu.description[0][1] == dbapi.NUMBER
+
+def test_inet_roundtrip():
+    cu.execute("INSERT INTO net VALUES('127.0.0.1'::inet)")
+    cu.execute("SELECT a FROM net")
+    a, = cu.fetchone()
+    cu.execute("SELECT COUNT(*) FROM net WHERE a=%s", [a])
+    assert cu.fetchone() == (1,)
 
 date_types = [
     'date',

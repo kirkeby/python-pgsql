@@ -48,20 +48,53 @@ threadsafety = 1
 # this module use ANSI C-style printf format codes
 paramstyle = 'format'
 
+# PostgreSQL type OIDs
+INET_TYPE_OID = 869
+CIDR_TYPE_OID = 650
+BYTEA_TYPE_OID = 17
+
+class pg_typed_value(object):
+    '''Special wrapper for postgresql values for which we want to keep their
+    type's OID, so we can safely round-trip them through Python. Also acts as
+    a typecaster.'''
+
+    __slots__ = ['value', '__pgsql_typeoid__']
+
+    def __init__(self, typoid, value):
+        if isinstance(value, buffer):
+            value = str(value)
+
+        assert isinstance(typoid, int), `typoid`
+        assert isinstance(value, str), `value`
+
+        self.__pgsql_typeoid__ = typoid
+        self.value = value
+
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return '<%s %d %r>' % (self.__class__.__name__,
+                               self.__pgsql_typeoid__,
+                               self.value)
+
+    def __cmp__(self, other):
+        return cmp(self.value, other)
+
 # convert to Python types the values that were not automatically
 # converted by pgsql.c
-def typecast_date(value):
+def typecast_date(typ, value):
     t = strptime(value, '%Y-%m-%d')
     return Date(*t[:3])
 
-def typecast_datetime(value):
+def typecast_datetime(typ, value):
     date, time = value.split(' ', 1)
-    time = typecast_time(time)
+    time = typecast_time(typ, time)
     date = strptime(date, '%Y-%m-%d')
     return datetime(date[0], date[1], date[2],
                     time.hour, time.minute, time.second, time.microsecond)
 
-def typecast_time(value):
+def typecast_time(typ, value):
     if '+' in value:
         if value.endswith('+00'):
             value = value[:-3]
@@ -137,7 +170,7 @@ denominators = {
     'year': 'years',
     'mon': 'months', 'mons': 'months'
 }
-def typecast_interval(value):
+def typecast_interval(typ, value):
     result = {}
 
     pieces = value.split()
@@ -147,7 +180,7 @@ def typecast_interval(value):
         result[attribute] = int(value)
 
     if pieces:
-        t = typecast_time(pieces.pop())
+        t = typecast_time(typ, pieces.pop())
         result['hours'] = t.hour
         result['minutes'] = t.minute
         result['seconds'] = t.second
@@ -155,23 +188,23 @@ def typecast_interval(value):
 
     return interval(**result)
 
-def typecast_numeric(value):
+def typecast_numeric(typ, value):
     return Decimal(value)
 
-def typecast_bool_ary(value):
+def typecast_bool_ary(typ, value):
     value = str(value)[1:-1]
     if not value:
         return []
     return [ e == 't' for e in value.split(',') ]
 
-def typecast_int_ary(value):
+def typecast_int_ary(typ, value):
     value = str(value)[1:-1]
     if not value:
         return []
     return [ int(e) for e in value.split(',') ]
 
 import csv
-def typecast_str_ary(value):
+def typecast_str_ary(typ, value):
     value = str(value)[1:-1]
     if not value:
         return []
@@ -187,12 +220,15 @@ default_typecasts = {
     1000: typecast_bool_ary,
     1007: typecast_int_ary,
     1009: typecast_str_ary,
+    INET_TYPE_OID: pg_typed_value,
+    CIDR_TYPE_OID: pg_typed_value,
 }
+
 def typecast(typ, casts, value):
     if value is None:
         return value
     if typ in casts:
-        return casts[typ](value)
+        return casts[typ](typ, value)
     return value
 
 # Silence warnings about array-conversions which we do here.
@@ -442,7 +478,7 @@ class Database(object):
             encoded.append(value)
         return encoded
 
-    def typecast_string(self, s):
+    def typecast_string(self, typ, s):
         return s.decode(self._encoding)
 
     def close(self):
@@ -566,9 +602,10 @@ def Time(hour, minute, second):
 def Timestamp(year, month, day, hour, minute, second):
     s, ms = split_second(second)
     return datetime(year, month, day, hour, minute, s, ms)
+
 class Binary:
     __binary__ = True
-    __pgsql_typeoid__ = 17 # BYTEAOID
+    __pgsql_typeoid__ = BYTEA_TYPE_OID
     def __init__(self, s):
         self.value = str(s)
     def __str__(self):
