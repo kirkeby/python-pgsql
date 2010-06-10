@@ -191,6 +191,9 @@ def typecast_interval(typ, value):
 def typecast_numeric(typ, value):
     return Decimal(value)
 
+def typecast_binary(typ, value):
+    return Binary(value)
+
 def typecast_bool_ary(typ, value):
     value = str(value)[1:-1]
     if not value:
