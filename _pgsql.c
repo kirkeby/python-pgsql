@@ -1961,6 +1961,61 @@ pg_execute(pgobject *self, PyObject *args)
     return ret;
 }
 
+/* copy in API */
+static char pg_put_copy_data__doc__[] =
+"put_copy_data(bytestring) -- puts bytestring on connection as part of a "
+" COPY IN operation.";
+static PyObject *
+pg_put_copy_data(pgobject *self, PyObject *args)
+{
+    const char *buf;
+    Py_ssize_t buf_len;
+
+    if(! check_pg_obj(self))
+        return NULL;
+
+    if(! PyArg_ParseTuple(args, "s#", &buf, &buf_len))
+        return NULL;
+
+    /* do it! */
+    if(PQputCopyData(self->cnx, buf, buf_len) != 1) {
+        PyErr_SetString(PyExc_ValueError, PQerrorMessage(self->cnx));
+        return NULL;
+    }
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+static char pg_put_copy_end__doc__[] =
+"put_copy_end() -- ends the current COPY IN operation.";
+static PyObject *
+pg_put_copy_end(pgobject *self, PyObject *args)
+{
+    if (!check_pg_obj(self))
+        return NULL;
+
+    /* frees previous result */
+    if (self->last_result) {
+        PQclear(self->last_result);
+        self->last_result = NULL;
+    }
+
+    /* do it! */
+    if(PQputCopyEnd(self->cnx, NULL) != 1) {
+        PyErr_SetString(PyExc_ValueError, PQerrorMessage(self->cnx));
+        return NULL;
+    }
+
+    /* get result and return it */
+    self->last_result = PQgetResult(self->cnx);
+    if(PQresultStatus(self->last_result) != PGRES_COMMAND_OK) {
+        PyErr_SetString(ProgrammingError, PQerrorMessage(self->cnx));
+        return NULL;
+    }
+    return PyInt_FromLong(atol(PQcmdTuples(self->last_result)));
+}
+
 static char pg_setnotices__doc__[] =
 "setnotices(bool) - enables/disable receiving and storing of the server notices.\n"
 "If enabled, the .notices attribute will be populated with server notice strings "
@@ -2007,6 +2062,8 @@ static struct PyMethodDef pgobj_methods[] = {
         {"close", (PyCFunction) pg_close, METH_VARARGS, pg_close__doc__},
 
         {"setnotices", (PyCFunction) pg_setnotices, METH_VARARGS, pg_setnotices__doc__},
+        {"put_copy_data", (PyCFunction) pg_put_copy_data, METH_VARARGS, pg_put_copy_data__doc__},
+        {"put_copy_end", (PyCFunction) pg_put_copy_end, METH_VARARGS, pg_put_copy_end__doc__},
 
         {NULL, NULL}                                /* sentinel */
 };

@@ -559,6 +559,17 @@ class Database(object):
         self._encoding = e
     encoding = property(get_encoding, set_encoding)
 
+    def copy_in(self, sql_stmt, iterable):
+        '''Execute a postgresql COPY IN statement.
+
+        Execute ``sql_stmt`` and send all byte-strings from iterable as
+        the COPY IN data.'''
+
+        self.execute(sql_stmt)
+        for data in iterable:
+            self.__cnx.put_copy_data(data)
+        return self.__cnx.put_copy_end()
+
 ### module interface
 def connect(database=None, user=None, password=None,
             host=None, port=-1, opt=None, tty=None):
