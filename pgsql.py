@@ -563,7 +563,10 @@ class Database(object):
         '''Execute a postgresql COPY IN statement.
 
         Execute ``sql_stmt`` and send all byte-strings from iterable as
-        the COPY IN data.'''
+        the COPY IN data.
+
+        Notice that if there are any unicode-strings in iterable, which
+        aren't all ASCII, this will blow up horribly.'''
 
         self.execute(sql_stmt)
         for data in iterable:
