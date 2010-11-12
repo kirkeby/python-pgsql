@@ -25,6 +25,7 @@ http://www.python.org/peps/pep-0249.html
 See the README file for an overview of this module's contents.
 """
 
+import re
 import warnings
 from math import floor, modf
 from time import localtime, strptime
@@ -243,17 +244,21 @@ for key in default_typecasts.keys():
                             RuntimeWarning)
 
 ### encode 'format'-encoded placeholders as PostgreSQL $n placeholders
+placeholder_re = re.compile(r'(%.)')
 def encode_sql(sql):
     # FIXME - Should be possible to disable this warning.
     if '$1' in sql:
         warnings.warn('PostgreSQL-style bind-parameters deprecated')
 
-    # FIXME - This is a bit too simpleminded, it will break on SQL
-    # statements with %s in literal strings.
-    pieces = []
-    for i, piece in enumerate(sql.split('%s')):
-        if i:
-            pieces.append('$%d' % i)
+    j, pieces = 0, []
+    for piece in placeholder_re.split(sql):
+        if piece == '%s':
+            j += 1
+            piece = '$%d' % j
+        elif piece == '%%':
+            piece = '%'
+        elif piece.startswith('%'):
+            warnings.warn('Unescaped % in SQL')
         pieces.append(piece)
     return ''.join(pieces)
 
