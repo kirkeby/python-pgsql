@@ -248,7 +248,8 @@ placeholder_re = re.compile(r'(%.)')
 def encode_sql(sql):
     # FIXME - Should be possible to disable this warning.
     if '$1' in sql:
-        warnings.warn('PostgreSQL-style bind-parameters deprecated')
+        warnings.warn('PostgreSQL-style bind-parameters deprecated',
+                      stacklevel=3)
 
     j, pieces = 0, []
     for piece in placeholder_re.split(sql):
@@ -258,7 +259,8 @@ def encode_sql(sql):
         elif piece == '%%':
             piece = '%'
         elif piece.startswith('%'):
-            warnings.warn('Unescaped % in SQL')
+            warnings.warn('Unescaped % in SQL',
+                          stacklevel=3)
         pieces.append(piece)
     return ''.join(pieces)
 
