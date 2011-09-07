@@ -40,6 +40,10 @@ from _pgsql import InterfaceError, DatabaseError, InternalError, \
 
 from datetime import datetime, date, time, timedelta
 
+# Work-around time.strptime not being thread-safe (see
+# <http://bugs.python.org/issue7980>) by making sure _strptime is imported.
+import _strptime
+
 # compliant with DB SIG 2.0
 apilevel = '2.0'
 
